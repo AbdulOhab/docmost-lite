@@ -4,49 +4,35 @@ import WebSocket from 'ws';
 import { AuthenticationExtension } from './extensions/authentication.extension';
 import { PersistenceExtension } from './extensions/persistence.extension';
 import { Injectable } from '@nestjs/common';
-import { EnvironmentService } from '../integrations/environment/environment.service';
-import {
-  createRetryStrategy,
-  parseRedisUrl,
-  RedisConfig,
-  resolveClientIp,
-} from '../common/helpers';
 import { LoggerExtension } from './extensions/logger.extension';
-import {
-  RedisSyncExtension,
-  SerializedHTTPRequest,
-} from './extensions/redis-sync';
-import { toWebRequest } from './extensions/redis-sync/redis-sync.types';
-import { WsSocketWrapper } from './extensions/redis-sync/ws-socket-wrapper';
-import RedisClient from 'ioredis';
-import { pack, unpack } from 'msgpackr';
-import { nanoid } from 'nanoid';
-import * as os from 'node:os';
 import { CollabWsAdapter } from './adapter/collab-ws.adapter';
 import {
   CollaborationHandler,
   CollabEventHandlers,
 } from './collaboration.handler';
 
+// Hocuspocus expects a web-standard Request
+const toWebRequest = (request: IncomingMessage) =>
+  new Request(new URL(request.url ?? '/', 'http://localhost'), {
+    method: request.method ?? 'GET',
+    headers: {
+      'sec-websocket-key': request.headers['sec-websocket-key'] ?? '',
+      'sec-websocket-protocol':
+        request.headers['sec-websocket-protocol'] ?? '',
+    },
+  });
+
 @Injectable()
 export class CollaborationGateway {
   private readonly hocuspocus: Hocuspocus;
-  private redisConfig: RedisConfig;
-  // @ts-ignore
-  private readonly redisSync: RedisSyncExtension<CollabEventHandlers> | null =
-    null;
-  private readonly withRedis: boolean;
+  private readonly eventHandlers: CollabEventHandlers;
 
   constructor(
     private authenticationExtension: AuthenticationExtension,
     private persistenceExtension: PersistenceExtension,
     private loggerExtension: LoggerExtension,
-    private environmentService: EnvironmentService,
     private collabEventsService: CollaborationHandler,
   ) {
-    this.redisConfig = parseRedisUrl(this.environmentService.getRedisUrl());
-    this.withRedis = !this.environmentService.isCollabDisableRedis();
-
     this.hocuspocus = new Hocuspocus({
       debounce: 10000,
       maxDebounce: 45000,
@@ -58,81 +44,22 @@ export class CollaborationGateway {
       ],
     });
 
-    if (this.withRedis) {
-      // @ts-ignore
-      this.redisSync = new RedisSyncExtension({
-        redis: new RedisClient({
-          host: this.redisConfig.host,
-          port: this.redisConfig.port,
-          username: this.redisConfig.username,
-          password: this.redisConfig.password,
-          db: this.redisConfig.db,
-          family: this.redisConfig.family,
-          tls: this.redisConfig.tls,
-          retryStrategy: createRetryStrategy(),
-        }),
-        serverId: `collab-${os?.hostname()}-${nanoid(10)}`,
-        prefix: 'collab',
-        pack,
-        unpack,
-        // @ts-ignore
-        customEvents: this.collabEventsService.getHandlers(this.hocuspocus),
-      });
-      this.hocuspocus.configuration.extensions.push(this.redisSync);
-      // @ts-ignore
-      this.redisSync.onConfigure({ instance: this.hocuspocus });
-    }
-  }
-
-  private serializeRequest(request: IncomingMessage): SerializedHTTPRequest {
-    return {
-      method: request.method ?? 'GET',
-      url: request.url ?? '/',
-      headers: {
-        'sec-websocket-key': request.headers['sec-websocket-key'] ?? '',
-        'sec-websocket-protocol':
-          request.headers['sec-websocket-protocol'] ?? '',
-      },
-      socket: { remoteAddress: resolveClientIp(request) ?? '' },
-    };
+    this.eventHandlers = this.collabEventsService.getHandlers(this.hocuspocus);
   }
 
   handleConnection(client: WebSocket, request: IncomingMessage): any {
-    if (this.redisSync) {
-      const serializedHTTPRequest = this.serializeRequest(request);
-      const socketId = serializedHTTPRequest.headers['sec-websocket-key'];
+    const clientConnection = this.hocuspocus.handleConnection(
+      client,
+      toWebRequest(request),
+    );
 
-      const wrappedSocket = new WsSocketWrapper(client);
+    client.on('message', (data: Buffer) => {
+      clientConnection.handleMessage(new Uint8Array(data));
+    });
 
-      // Route through RedisSync extension (this calls handleConnection internally)
-      this.redisSync.onSocketOpen(wrappedSocket, serializedHTTPRequest);
-
-      client.on('message', (data: ArrayBuffer) => {
-        this.redisSync!.onSocketMessage(serializedHTTPRequest, data);
-      });
-
-      client.on('close', (code: number, reason: Buffer) => {
-        this.redisSync!.onSocketClose(
-          socketId,
-          code,
-          new Uint8Array(reason).buffer,
-        );
-      });
-    } else {
-      // Fallback to direct Hocuspocus connection
-      const clientConnection = this.hocuspocus.handleConnection(
-        client,
-        toWebRequest(this.serializeRequest(request)),
-      );
-
-      client.on('message', (data: Buffer) => {
-        clientConnection.handleMessage(new Uint8Array(data));
-      });
-
-      client.on('close', (code: number, reason: Buffer) => {
-        clientConnection.handleClose({ code, reason: reason.toString() });
-      });
-    }
+    client.on('close', (code: number, reason: Buffer) => {
+      clientConnection.handleClose({ code, reason: reason.toString() });
+    });
   }
 
   getConnectionCount() {
@@ -143,36 +70,22 @@ export class CollaborationGateway {
     return this.hocuspocus.getDocumentsCount();
   }
 
-  handleYjsEvent<TName extends keyof CollabEventHandlers>(
+  async handleYjsEvent<TName extends keyof CollabEventHandlers>(
     eventName: TName,
     documentName: string,
     payload: Parameters<CollabEventHandlers[TName]>[1],
+    // if true, skip documents that are not currently open
     onlyIfOpen = false,
-  ) {
-    return this.redisSync?.handleEvent(
-      eventName,
-      documentName,
-      payload,
-      onlyIfOpen,
-    );
+  ): Promise<ReturnType<CollabEventHandlers[TName]> extends Promise<infer R> ? R : never> {
+    if (onlyIfOpen && !this.hocuspocus.documents.has(documentName)) {
+      return undefined as any;
+    }
+    // @ts-ignore
+    return this.eventHandlers[eventName](documentName, payload);
   }
 
   openDirectConnection(documentName: string, context?: any) {
     return this.hocuspocus.openDirectConnection(documentName, context);
-  }
-
-  /*
-   *Can be used before calling openDirectConnection directly
-   */
-  async lockDocument(documentName: string) {
-    return this.redisSync.lockDocument(documentName);
-  }
-
-  /*
-   *Releases a document lock and stops the interval that maintains it.
-   */
-  async releaseLock(documentName: string) {
-    return this.redisSync.releaseLock(documentName);
   }
 
   async destroy(collabWsAdapter: CollabWsAdapter): Promise<void> {

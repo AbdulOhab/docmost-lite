@@ -11,7 +11,6 @@ import { CollabAccessModule } from './collaboration/collab-access.module';
 import { WsModule } from './ws/ws.module';
 import { DatabaseModule } from '@docmost/db/database.module';
 import { StorageModule } from './integrations/storage/storage.module';
-import { MailModule } from './integrations/mail/mail.module';
 import { QueueModule } from './integrations/queue/queue.module';
 import { StaticModule } from './integrations/static/static.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
@@ -19,32 +18,13 @@ import { HealthModule } from './integrations/health/health.module';
 import { ExportModule } from './integrations/export/export.module';
 import { ImportModule } from './integrations/import/import.module';
 import { SecurityModule } from './integrations/security/security.module';
-import { TelemetryModule } from './integrations/telemetry/telemetry.module';
-import { RedisModule } from '@nestjs-labs/nestjs-ioredis';
-import { RedisConfigService } from './integrations/redis/redis-config.service';
 import { CacheModule } from '@nestjs/cache-manager';
-import KeyvRedis, { defaultReconnectStrategy } from '@keyv/redis';
-import { parseRedisUrl } from './common/helpers';
 import { LoggerModule } from './common/logger/logger.module';
 import { ClsModule } from 'nestjs-cls';
 import { NoopAuditModule } from './integrations/audit/audit.module';
 import { ThrottleModule } from './integrations/throttle/throttle.module';
 import { OutboundModule } from './integrations/outbound/outbound.module';
 import { EncryptionModule } from './integrations/encryption/encryption.module';
-
-const enterpriseModules = [];
-try {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  if (require('./ee/ee.module')?.EeModule) {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    enterpriseModules.push(require('./ee/ee.module')?.EeModule);
-  }
-} catch (err) {
-  if (process.env.CLOUD === 'true') {
-    console.warn('Failed to load enterprise modules. Exiting program.\n', err);
-    process.exit(1);
-  }
-}
 
 @Module({
   imports: [
@@ -53,36 +33,12 @@ try {
       middleware: { mount: true },
     }),
     LoggerModule,
-    ...(enterpriseModules.length > 0 ? [] : [NoopAuditModule]),
+    NoopAuditModule,
     CoreModule,
     DatabaseModule,
     EnvironmentModule,
     EncryptionModule,
-    RedisModule.forRootAsync({
-      useClass: RedisConfigService,
-    }),
-    CacheModule.registerAsync({
-      isGlobal: true,
-      useFactory: async (environmentService: EnvironmentService) => {
-        const redisUrl = environmentService.getRedisUrl();
-        const { family, tls } = parseRedisUrl(redisUrl);
-
-        return {
-          ttl: 5 * 1000,
-          stores: [
-            new KeyvRedis({
-              url: redisUrl,
-              socket: {
-                family,
-                reconnectStrategy: defaultReconnectStrategy,
-                ...tls,
-              },
-            }),
-          ],
-        };
-      },
-      inject: [EnvironmentService],
-    }),
+    CacheModule.register({ isGlobal: true, ttl: 5 * 1000 }),
     CollaborationModule,
     CollabAccessModule,
     WsModule,
@@ -94,15 +50,10 @@ try {
     StorageModule.forRootAsync({
       imports: [EnvironmentModule],
     }),
-    MailModule.forRootAsync({
-      imports: [EnvironmentModule],
-    }),
     EventEmitterModule.forRoot(),
     SecurityModule,
-    TelemetryModule,
     ThrottleModule,
     OutboundModule,
-    ...enterpriseModules,
   ],
   controllers: [AppController],
   providers: [

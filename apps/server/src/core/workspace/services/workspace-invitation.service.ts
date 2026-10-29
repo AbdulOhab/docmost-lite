@@ -7,6 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { AcceptInviteDto, InviteUserDto } from '../dto/invitation.dto';
+import { InjectQueue, Queue } from '../../../integrations/queue/local-queue';
 import { UserRepo } from '@docmost/db/repos/user/user.repo';
 import { InjectKysely } from 'nestjs-kysely';
 import { KyselyDB } from '@docmost/db/types/kysely.types';
@@ -18,19 +19,14 @@ import {
   Workspace,
   WorkspaceInvitation,
 } from '@docmost/db/types/entity.types';
-import { MailService } from '../../../integrations/mail/mail.service';
-import InvitationEmail from '@docmost/transactional/emails/invitation-email';
 import { GroupUserRepo } from '@docmost/db/repos/group/group-user.repo';
-import InvitationAcceptedEmail from '@docmost/transactional/emails/invitation-accepted-email';
 import { TokenService } from '../../auth/services/token.service';
 import { SessionService } from '../../session/session.service';
 import { nanoIdGen } from '../../../common/helpers';
 import { PaginationOptions } from '@docmost/db/pagination/pagination-options';
 import { executeWithCursorPagination } from '@docmost/db/pagination/cursor-pagination';
-import { DomainService } from 'src/integrations/environment/domain.service';
-import { InjectQueue } from '@nestjs/bullmq';
+import { DomainService } from '../../../integrations/environment/domain.service';
 import { QueueJob, QueueName } from '../../../integrations/queue/constants';
-import { Queue } from 'bullmq';
 import { EnvironmentService } from '../../../integrations/environment/environment.service';
 import {
   validateAllowedEmail,
@@ -52,12 +48,10 @@ export class WorkspaceInvitationService {
   constructor(
     private userRepo: UserRepo,
     private groupUserRepo: GroupUserRepo,
-    private mailService: MailService,
     private domainService: DomainService,
     private tokenService: TokenService,
     private sessionService: SessionService,
     @InjectKysely() private readonly db: KyselyDB,
-    @InjectQueue(QueueName.BILLING_QUEUE) private billingQueue: Queue,
     private readonly environmentService: EnvironmentService,
     @Inject(AUDIT_SERVICE) private readonly auditService: IAuditService,
   ) {}
@@ -189,16 +183,6 @@ export class WorkspaceInvitationService {
 
     // do not send code to do nothing users
     if (invites) {
-      invites.forEach((invitation: WorkspaceInvitation) => {
-        this.sendInvitationMail(
-          invitation.id,
-          invitation.email,
-          invitation.token,
-          authUser.name,
-          workspace.hostname,
-        );
-      });
-
       // Audit log for each invitation created
       for (const invitation of invites) {
         this.auditService.log({
@@ -314,25 +298,6 @@ export class WorkspaceInvitationService {
       return;
     }
 
-    // notify the inviter
-    const invitedByUser = await this.userRepo.findById(
-      invitation.invitedById,
-      workspace.id,
-    );
-
-    if (invitedByUser) {
-      const emailTemplate = InvitationAcceptedEmail({
-        invitedUserName: newUser.name,
-        invitedUserEmail: newUser.email,
-      });
-
-      await this.mailService.sendToQueue({
-        to: invitedByUser.email,
-        subject: `${newUser.name} has accepted your Docmost invite`,
-        template: emailTemplate,
-      });
-    }
-
     this.auditService.log({
       event: AuditEvent.USER_CREATED,
       resourceType: AuditResource.USER,
@@ -350,12 +315,6 @@ export class WorkspaceInvitationService {
       },
     });
 
-    if (this.environmentService.isCloud()) {
-      await this.billingQueue.add(QueueJob.STRIPE_SEATS_SYNC, {
-        workspaceId: workspace.id,
-      });
-    }
-
     if (workspace.enforceMfa) {
       return {
         requiresLogin: true,
@@ -364,45 +323,6 @@ export class WorkspaceInvitationService {
 
     const authToken = await this.sessionService.createSessionAndToken(newUser);
     return { authToken };
-  }
-
-  async resendInvitation(
-    invitationId: string,
-    workspace: Workspace,
-  ): Promise<void> {
-    const invitation = await this.db
-      .selectFrom('workspaceInvitations')
-      .selectAll()
-      .where('id', '=', invitationId)
-      .where('workspaceId', '=', workspace.id)
-      .executeTakeFirst();
-
-    if (!invitation) {
-      throw new BadRequestException('Invitation not found');
-    }
-
-    const invitedByUser = await this.userRepo.findById(
-      invitation.invitedById,
-      workspace.id,
-    );
-
-    await this.sendInvitationMail(
-      invitation.id,
-      invitation.email,
-      invitation.token,
-      invitedByUser.name,
-      workspace.hostname,
-    );
-
-    this.auditService.log({
-      event: AuditEvent.WORKSPACE_INVITE_RESENT,
-      resourceType: AuditResource.WORKSPACE_INVITATION,
-      resourceId: invitation.id,
-      metadata: {
-        email: invitation.email,
-        role: invitation.role,
-      },
-    });
   }
 
   async revokeInvitation(
@@ -456,29 +376,5 @@ export class WorkspaceInvitationService {
   }): Promise<string> {
     const { invitationId, inviteToken, hostname } = opts;
     return `${this.domainService.getUrl(hostname)}/invites/${invitationId}?token=${inviteToken}`;
-  }
-
-  async sendInvitationMail(
-    invitationId: string,
-    inviteeEmail: string,
-    inviteToken: string,
-    invitedByName: string,
-    hostname?: string,
-  ): Promise<void> {
-    const inviteLink = await this.buildInviteLink({
-      invitationId,
-      inviteToken,
-      hostname,
-    });
-
-    const emailTemplate = InvitationEmail({
-      inviteLink,
-    });
-
-    await this.mailService.sendToQueue({
-      to: inviteeEmail,
-      subject: `${invitedByName} invited you to Docmost`,
-      template: emailTemplate,
-    });
   }
 }

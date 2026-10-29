@@ -92,12 +92,6 @@ export async function getInviteLink(data: {
   return req.data;
 }
 
-export async function resendInvitation(data: {
-  invitationId: string;
-}): Promise<void> {
-  await api.post("/workspace/invites/resend", data);
-}
-
 export async function revokeInvitation(data: {
   invitationId: string;
 }): Promise<void> {

@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { CreatePageDto, ContentFormat } from '../dto/create-page.dto';
+import { InjectQueue, Queue } from '../../../integrations/queue/local-queue';
 import { ContentOperation, UpdatePageDto } from '../dto/update-page.dto';
 import { PageRepo } from '@docmost/db/repos/page/page.repo';
 import { PagePermissionRepo } from '@docmost/db/repos/page/page-permission.repo';
@@ -35,15 +36,13 @@ import {
   htmlToJson,
   jsonToNode,
   jsonToText,
-} from 'src/collaboration/collaboration.util';
+} from '../../../collaboration/collaboration.util';
 import {
   CopyPageMapEntry,
   ICopyPageAttachment,
 } from '../dto/duplicate-page.dto';
 import { Node as PMNode } from '@tiptap/pm/model';
 import { StorageService } from '../../../integrations/storage/storage.service';
-import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bullmq';
 import { QueueJob, QueueName } from '../../../integrations/queue/constants';
 import { EventName } from '../../../common/events/event.contants';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -71,7 +70,6 @@ export class PageService {
     @InjectKysely() private readonly db: KyselyDB,
     private readonly storageService: StorageService,
     @InjectQueue(QueueName.ATTACHMENT_QUEUE) private attachmentQueue: Queue,
-    @InjectQueue(QueueName.AI_QUEUE) private aiQueue: Queue,
     @InjectQueue(QueueName.GENERAL_QUEUE) private generalQueue: Queue,
     private eventEmitter: EventEmitter2,
     private collaborationGateway: CollaborationGateway,
@@ -521,21 +519,6 @@ export class PageService {
           },
         );
 
-        await this.aiQueue.add(
-          QueueJob.PAGE_MOVED_TO_SPACE,
-          {
-            pageIds: pageIdsToMove,
-            spaceId,
-            workspaceId: currentRootPage.workspaceId,
-          },
-          {
-            attempts: 2,
-            backoff: {
-              type: 'fixed',
-              delay: 2 * 60 * 1000,
-            },
-          },
-        );
       }
 
       return { childPageIds };

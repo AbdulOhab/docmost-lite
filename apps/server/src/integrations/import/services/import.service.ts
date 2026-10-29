@@ -25,8 +25,7 @@ import {
 } from '../utils/file.utils';
 import { v7 as uuid7 } from 'uuid';
 import { StorageService } from '../../storage/storage.service';
-import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bullmq';
+import { InjectQueue, Queue } from '../../queue/local-queue';
 import { QueueJob, QueueName } from '../../queue/constants';
 import { ModuleRef } from '@nestjs/core';
 import { load } from 'cheerio';
@@ -73,22 +72,6 @@ export class ImportService {
         prosemirrorState = await this.processMarkdown(fileContent);
       } else if (fileExtension.endsWith('.html')) {
         prosemirrorState = await this.processHTML(fileContent);
-      } else if (fileExtension.endsWith('.docx')) {
-        prosemirrorState = await this.processDocx(
-          fileBuffer,
-          workspaceId,
-          spaceId,
-          pageId,
-          userId,
-        );
-      } else if (fileExtension.endsWith('.pdf')) {
-        prosemirrorState = await this.processPdf(
-          fileBuffer,
-          workspaceId,
-          spaceId,
-          pageId,
-          userId,
-        );
       }
     } catch (err) {
       const message = 'Error processing file content';
@@ -157,78 +140,6 @@ export class ImportService {
     } catch (err) {
       throw err;
     }
-  }
-
-  async processDocx(
-    fileBuffer: Buffer,
-    workspaceId: string,
-    spaceId: string,
-    pageId: string,
-    userId: string,
-  ): Promise<any> {
-    let DocxImportModule: any;
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      DocxImportModule = require('./../../../ee/document-import/docx-import.service');
-    } catch (err) {
-      this.logger.error(
-        'DOCX import requested but EE module not bundled in this build',
-      );
-      throw new BadRequestException(
-        'This feature requires a valid enterprise license.',
-      );
-    }
-
-    const docxImportService = this.moduleRef.get(
-      DocxImportModule.DocxImportService,
-      { strict: false },
-    );
-
-    const html = await docxImportService.convertDocxToHtml(
-      fileBuffer,
-      workspaceId,
-      spaceId,
-      pageId,
-      userId,
-    );
-
-    return this.processHTML(html);
-  }
-
-  async processPdf(
-    fileBuffer: Buffer,
-    workspaceId: string,
-    spaceId: string,
-    pageId: string,
-    userId: string,
-  ): Promise<any> {
-    let PdfImportModule: any;
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      PdfImportModule = require('./../../../ee/document-import/pdf-import.service');
-    } catch (err) {
-      this.logger.error(
-        'PDF import requested but EE module not bundled in this build',
-      );
-      throw new BadRequestException(
-        'This feature requires a valid enterprise license.',
-      );
-    }
-
-    const pdfImportService = this.moduleRef.get(
-      PdfImportModule.PdfImportService,
-      { strict: false },
-    );
-
-    const html = await pdfImportService.convertPdfToHtml(
-      fileBuffer,
-      workspaceId,
-      spaceId,
-      pageId,
-      userId,
-    );
-
-    return this.processHTML(html);
   }
 
   async createYdoc(prosemirrorJson: any): Promise<Buffer | null> {

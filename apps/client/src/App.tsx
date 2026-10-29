@@ -33,8 +33,6 @@ const AccountPreferences = lazyWithPrefetch(
 const SpaceHome = lazyWithPrefetch(() => import("@/pages/space/space-home.tsx"));
 const PageRedirect = lazyWithPrefetch(() => import("@/pages/page/page-redirect.tsx"));
 const InviteSignup = lazyWithPrefetch(() => import("@/pages/auth/invite-signup.tsx"));
-const ForgotPassword = lazyWithPrefetch(() => import("@/pages/auth/forgot-password.tsx"));
-const PasswordReset = lazyWithPrefetch(() => import("./pages/auth/password-reset"));
 const Billing = lazyWithPrefetch(() => import("@/ee/billing/pages/billing.tsx"));
 const CloudLogin = lazyWithPrefetch(() => import("@/ee/pages/cloud-login.tsx"));
 const CreateWorkspace = lazyWithPrefetch(() => import("@/ee/pages/create-workspace.tsx"));
@@ -114,8 +112,6 @@ export default function App() {
         <Route index element={<Navigate to="/home" />} />
         <Route path={"/login"} element={<LoginPage />} />
         <Route path={"/invites/:invitationId"} element={<InviteSignup />} />
-        <Route path={"/forgot-password"} element={<ForgotPassword />} />
-        <Route path={"/password-reset"} element={<PasswordReset />} />
         <Route path={"/login/mfa"} element={<MfaChallengePage />} />
         <Route path={"/login/mfa/setup"} element={<MfaSetupRequiredPage />} />
         <Route path={"/oauth/consent"} element={<OAuthConsent />} />

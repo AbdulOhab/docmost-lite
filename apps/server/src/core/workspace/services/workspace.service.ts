@@ -7,6 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { LicenseCheckService } from '../../../integrations/environment/license-check.service';
+import { InjectQueue, Queue } from '../../../integrations/queue/local-queue';
 import { UserSessionRepo } from '@docmost/db/repos/session/user-session.repo';
 import { CreateWorkspaceDto } from '../dto/create-workspace.dto';
 import { UpdateWorkspaceDto } from '../dto/update-workspace.dto';
@@ -32,9 +33,7 @@ import { addDays } from 'date-fns';
 import { DISALLOWED_HOSTNAMES, WorkspaceStatus } from '../workspace.constants';
 import { isAdminActingOnOwner } from '../workspace.util';
 import { v4 } from 'uuid';
-import { InjectQueue } from '@nestjs/bullmq';
 import { QueueJob, QueueName } from '../../../integrations/queue/constants';
-import { Queue } from 'bullmq';
 import {
   generateRandomSuffixNumbers,
   diffAuditTrackedFields,
@@ -50,7 +49,6 @@ import {
   AUDIT_SERVICE,
   IAuditService,
 } from '../../../integrations/audit/audit.service';
-import { IntegrationConnectionRepo } from '../../integration/repos/integration-connection.repo';
 import { WsService } from '../../../ws/ws.service';
 import { CollabAccessService } from '../../../collaboration/services/collab-access.service';
 
@@ -74,11 +72,8 @@ export class WorkspaceService {
     private favoriteRepo: FavoriteRepo,
     @InjectKysely() private readonly db: KyselyDB,
     @InjectQueue(QueueName.ATTACHMENT_QUEUE) private attachmentQueue: Queue,
-    @InjectQueue(QueueName.BILLING_QUEUE) private billingQueue: Queue,
-    @InjectQueue(QueueName.AI_QUEUE) private aiQueue: Queue,
     @Inject(AUDIT_SERVICE) private readonly auditService: IAuditService,
     private userSessionRepo: UserSessionRepo,
-    private integrationConnectionRepo: IntegrationConnectionRepo,
     private wsService: WsService,
     private readonly collabAccessService: CollabAccessService,
   ) {}
@@ -145,10 +140,6 @@ export class WorkspaceService {
           // generate unique hostname
           hostname = await this.generateHostname(
             createWorkspaceDto.hostname ?? createWorkspaceDto.name,
-          );
-          trialEndAt = addDays(
-            new Date(),
-            this.environmentService.getBillingTrialDays(),
           );
           status = WorkspaceStatus.Active;
           plan = 'standard';
@@ -241,26 +232,6 @@ export class WorkspaceService {
       },
       trx,
     );
-
-    if (this.environmentService.isCloud() && trialEndAt) {
-      try {
-        const delay = trialEndAt.getTime() - Date.now();
-
-        await this.billingQueue.add(
-          QueueJob.TRIAL_ENDED,
-          { workspaceId: createdWorkspace.id },
-          { delay },
-        );
-
-        await this.billingQueue.add(
-          QueueJob.WELCOME_EMAIL,
-          { userId: user.id },
-          { delay: 30 * 60 * 1000 }, // 30m
-        );
-      } catch (err) {
-        this.logger.error(err);
-      }
-    }
 
     return createdWorkspace;
   }
@@ -439,18 +410,6 @@ export class WorkspaceService {
       ) {
         before.trashRetentionDays = ws.trashRetentionDays;
         after.trashRetentionDays = updateWorkspaceDto.trashRetentionDays;
-      }
-    }
-
-    if (
-      updateWorkspaceDto.aiSearch &&
-      this.environmentService.getAiVectorDriver() !== 'turbopuffer'
-    ) {
-      const tableExists = await isPageEmbeddingsTableExists(this.db);
-      if (!tableExists) {
-        throw new BadRequestException(
-          'Failed to activate. Make sure pgvector postgres extension is installed.',
-        );
       }
     }
 
@@ -695,24 +654,6 @@ export class WorkspaceService {
       );
     });
 
-    if (after.aiSearch === true) {
-      await this.aiQueue.add(QueueJob.WORKSPACE_CREATE_EMBEDDINGS, {
-        workspaceId,
-      });
-    } else if (after.aiSearch === false) {
-      const deleteJobId = `ai-search-disabled-${workspaceId}`;
-      await this.aiQueue.add(
-        QueueJob.WORKSPACE_DELETE_EMBEDDINGS,
-        { workspaceId },
-        {
-          jobId: deleteJobId,
-          delay: 24 * 60 * 60 * 1000,
-          removeOnComplete: true,
-          removeOnFail: true,
-        },
-      );
-    }
-
     const workspace = await this.workspaceRepo.findById(workspaceId, {
       withMemberCount: true,
       withLicenseKey: true,
@@ -918,7 +859,6 @@ export class WorkspaceService {
         trx,
       );
       await this.userSessionRepo.revokeByUserId(userId, workspaceId, trx);
-      await this.integrationConnectionRepo.deleteUserConnections(userId, trx);
 
       return user;
     });
@@ -1046,7 +986,6 @@ export class WorkspaceService {
       });
 
       await this.userSessionRepo.revokeByUserId(userId, workspaceId, trx);
-      await this.integrationConnectionRepo.deleteUserConnections(userId, trx);
 
       return user;
     });

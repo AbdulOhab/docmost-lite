@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { InjectQueue, Queue } from '../../../integrations/queue/local-queue';
 import { InjectKysely } from 'nestjs-kysely';
-import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bullmq';
 import { KyselyDB } from '@docmost/db/types/kysely.types';
 import {
   IPageMentionNotificationJob,
@@ -14,17 +13,11 @@ import { NotificationRepo } from '@docmost/db/repos/notification/notification.re
 import { SpaceMemberRepo } from '@docmost/db/repos/space/space-member.repo';
 import { PagePermissionRepo } from '@docmost/db/repos/page/page-permission.repo';
 import { WatcherRepo } from '@docmost/db/repos/watcher/watcher.repo';
-import { PageUpdateEmailRateLimiter } from './page-update-email-rate-limiter';
-import { PageMentionEmail } from '@docmost/transactional/emails/page-mention-email';
-import { PageUpdateEmail } from '@docmost/transactional/emails/page-update-email';
-import { PageUpdateDigestEmail } from '@docmost/transactional/emails/page-update-digest-email';
-import { PermissionGrantedEmail } from '@docmost/transactional/emails/permission-granted-email';
 import { getPageTitle } from '../../../common/helpers';
 import { QueueJob, QueueName } from '../../../integrations/queue/constants';
 import { CollaborationGateway } from '../../../collaboration/collaboration.gateway';
 
 const PAGE_UPDATE_COOLDOWN_HOURS = 7;
-const DIGEST_DELAY_MS = 12 * 60 * 60 * 1000; // 12 hours
 
 @Injectable()
 export class PageNotificationService {
@@ -37,9 +30,7 @@ export class PageNotificationService {
     private readonly spaceMemberRepo: SpaceMemberRepo,
     private readonly pagePermissionRepo: PagePermissionRepo,
     private readonly watcherRepo: WatcherRepo,
-    private readonly rateLimiter: PageUpdateEmailRateLimiter,
     private readonly collaborationGateway: CollaborationGateway,
-    @InjectQueue(QueueName.NOTIFICATION_QUEUE) private notificationQueue: Queue,
   ) {}
 
   async processPageMention(data: IPageMentionNotificationJob, appUrl: string) {
@@ -121,13 +112,6 @@ export class PageNotificationService {
       const pageUrl = `${basePageUrl}`;
       const subject = `${actor.name} mentioned you in ${pageTitle}`;
 
-      await this.notificationService.queueEmail(
-        userId,
-        notification.id,
-        subject,
-        PageMentionEmail({ actorName: actor.name, pageTitle, pageUrl }),
-        NotificationType.PAGE_USER_MENTION,
-      );
     }
   }
 
@@ -164,17 +148,6 @@ export class PageNotificationService {
 
       const subject = `${actor.name} gave you ${accessLabel} access to ${pageTitle}`;
 
-      await this.notificationService.queueEmail(
-        userId,
-        notification.id,
-        subject,
-        PermissionGrantedEmail({
-          actorName: actor.name,
-          pageTitle,
-          pageUrl: basePageUrl,
-          accessLabel,
-        }),
-      );
     }
   }
 
@@ -251,31 +224,6 @@ export class PageNotificationService {
         spaceId,
       });
       if (!notification) continue;
-
-      const canSend = await this.rateLimiter.canSendEmail(userId);
-      if (canSend) {
-        await this.notificationService.queueEmail(
-          userId,
-          notification.id,
-          `${actor.name} updated ${pageTitle}`,
-          PageUpdateEmail({
-            userName: eligibleUsers.get(userId) ?? '',
-            actorName: actor.name,
-            pageTitle,
-            pageUrl: basePageUrl,
-            spaceName,
-          }),
-          NotificationType.PAGE_UPDATED,
-        );
-      } else {
-        const isFirst = await this.rateLimiter.addToDigest(
-          userId,
-          notification.id,
-        );
-        if (isFirst) {
-          await this.scheduleDigest(userId, workspaceId);
-        }
-      }
     }
   }
 
@@ -300,128 +248,6 @@ export class PageNotificationService {
       }
     }
     return eligible;
-  }
-
-  private async scheduleDigest(
-    userId: string,
-    workspaceId: string,
-  ): Promise<void> {
-    await this.notificationQueue
-      .add(
-        QueueJob.PAGE_UPDATE_DIGEST,
-        { userId, workspaceId },
-        { delay: DIGEST_DELAY_MS, removeOnComplete: true },
-      )
-      .catch((err) => {
-        this.logger.error(
-          `Failed to schedule digest for ${userId}: ${err.message}`,
-        );
-      });
-  }
-
-  async processDigest(userId: string, appUrl: string): Promise<void> {
-    const notificationIds = await this.rateLimiter.popDigest(userId);
-    if (notificationIds.length === 0) return;
-
-    const [user, notifications] = await Promise.all([
-      this.db
-        .selectFrom('users')
-        .select(['id', 'name'])
-        .where('id', '=', userId)
-        .executeTakeFirst(),
-      this.db
-        .selectFrom('notifications')
-        .select(['id', 'pageId', 'actorId'])
-        .where('id', 'in', notificationIds)
-        .execute(),
-    ]);
-
-    if (!user || notifications.length === 0) return;
-
-    const pageIds = [
-      ...new Set(notifications.map((n) => n.pageId).filter(Boolean)),
-    ];
-    const actorIds = [
-      ...new Set(notifications.map((n) => n.actorId).filter(Boolean)),
-    ];
-
-    const allPages = await this.db
-      .selectFrom('pages')
-      .innerJoin('spaces', 'spaces.id', 'pages.spaceId')
-      .select([
-        'pages.id',
-        'pages.title',
-        'pages.slugId',
-        'pages.spaceId',
-        'spaces.slug as spaceSlug',
-      ])
-      .where('pages.id', 'in', pageIds)
-      .execute();
-
-    if (allPages.length === 0) return;
-
-    const spaceIds = [...new Set(allPages.map((p) => p.spaceId))];
-
-    const accessibleSpaceIds = new Set<string>();
-    for (const spaceId of spaceIds) {
-      const usersWithAccess =
-        await this.spaceMemberRepo.getUserIdsWithSpaceAccess([userId], spaceId);
-      if (usersWithAccess.has(userId)) accessibleSpaceIds.add(spaceId);
-    }
-
-    const spaceFilteredPages = allPages.filter((p) =>
-      accessibleSpaceIds.has(p.spaceId),
-    );
-    if (spaceFilteredPages.length === 0) return;
-
-    const accessiblePageIds = new Set<string>();
-    for (const p of spaceFilteredPages) {
-      const hasAccess = await this.pagePermissionRepo.getUserIdsWithPageAccess(
-        p.id,
-        [userId],
-      );
-      if (hasAccess.includes(userId)) accessiblePageIds.add(p.id);
-    }
-
-    const pages = spaceFilteredPages.filter((p) => accessiblePageIds.has(p.id));
-    if (pages.length === 0) return;
-
-    const actors =
-      actorIds.length > 0
-        ? await this.db
-            .selectFrom('users')
-            .select(['id', 'name'])
-            .where('id', 'in', actorIds)
-            .execute()
-        : [];
-
-    const actorMap = new Map(actors.map((a) => [a.id, a.name]));
-    const pageActors = new Map<string, Set<string>>();
-    for (const n of notifications) {
-      if (!n.pageId || !n.actorId) continue;
-      const names = pageActors.get(n.pageId) ?? new Set();
-      const name = actorMap.get(n.actorId);
-      if (name) names.add(name);
-      pageActors.set(n.pageId, names);
-    }
-
-    const pageUpdates = pages.map((p) => ({
-      title: getPageTitle(p.title),
-      url: `${appUrl}/s/${p.spaceSlug}/p/${p.slugId}`,
-      updatedBy: [...(pageActors.get(p.id) ?? [])],
-    }));
-
-    await this.notificationService.queueEmail(
-      userId,
-      notificationIds[0],
-      `Your digest: ${pageUpdates.length} page ${pageUpdates.length === 1 ? 'update' : 'updates'}`,
-      PageUpdateDigestEmail({
-        userName: user.name,
-        pageUpdates,
-        totalUpdates: pageUpdates.length,
-      }),
-      NotificationType.PAGE_UPDATED,
-    );
   }
 
   private async getPageContext(

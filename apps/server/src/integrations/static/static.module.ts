@@ -44,16 +44,7 @@ export class StaticModule implements OnModuleInit {
           ? this.environmentService.getSubdomainHost()
           : undefined,
         COLLAB_URL: this.environmentService.getCollabUrl(),
-        BILLING_TRIAL_DAYS: this.environmentService.isCloud()
-          ? this.environmentService.getBillingTrialDays()
-          : undefined,
         BETA_PUBLIC_SPACES: this.environmentService.isBetaPublicSpaces(),
-        POSTHOG_HOST: this.environmentService.getPostHogHost(),
-        POSTHOG_KEY: this.environmentService.getPostHogKey(),
-        AI_VECTOR_DRIVER:
-          this.environmentService.getAiVectorDriver() === 'turbopuffer'
-            ? 'turbopuffer'
-            : undefined,
       };
 
       const windowScriptContent = `<script>window.CONFIG=${JSON.stringify(configString)};</script>`;

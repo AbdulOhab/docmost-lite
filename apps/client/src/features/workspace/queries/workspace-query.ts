@@ -11,7 +11,6 @@ import {
   getPendingInvitations,
   getWorkspaceMembers,
   createInvitation,
-  resendInvitation,
   revokeInvitation,
   getWorkspace,
   getWorkspacePublicData,
@@ -168,25 +167,6 @@ export function useCreateInvitationMutation() {
       queryClient.refetchQueries({
         queryKey: ["invitations"],
       });
-    },
-    onError: (error) => {
-      const errorMessage = error["response"]?.data?.message;
-      notifications.show({ message: errorMessage, color: "red" });
-    },
-  });
-}
-
-export function useResendInvitationMutation() {
-  return useMutation<
-    void,
-    Error,
-    {
-      invitationId: string;
-    }
-  >({
-    mutationFn: (data) => resendInvitation(data),
-    onSuccess: (data, variables) => {
-      notifications.show({ message: "Invitation resent" });
     },
     onError: (error) => {
       const errorMessage = error["response"]?.data?.message;

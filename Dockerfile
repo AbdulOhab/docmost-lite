@@ -34,6 +34,7 @@ COPY --from=builder /app/apps/server/dist /app/apps/server/dist
 COPY --from=builder /app/apps/client/dist /app/apps/client/dist
 COPY --from=builder /app/apps/client/package.json /app/apps/client/package.json
 COPY --from=builder /app/apps/server/package.json /app/apps/server/package.json
+COPY --from=builder /app/apps/server/scripts /app/apps/server/scripts
 
 # Copy packages
 COPY --from=builder /app/packages/editor-ext/dist /app/packages/editor-ext/dist

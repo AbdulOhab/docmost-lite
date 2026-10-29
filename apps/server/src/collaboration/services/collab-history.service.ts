@@ -1,30 +1,23 @@
 import { Injectable } from '@nestjs/common';
-import { RedisService } from '@nestjs-labs/nestjs-ioredis';
-import type { Redis } from 'ioredis';
-
-const REDIS_KEY_PREFIX = 'history:contributors:';
 
 @Injectable()
 export class CollabHistoryService {
-  private readonly redis: Redis;
-
-  constructor(private readonly redisService: RedisService) {
-    this.redis = this.redisService.getOrThrow();
-  }
+  private readonly contributors = new Map<string, Set<string>>();
 
   async addContributors(pageId: string, userIds: string[]): Promise<void> {
     if (userIds.length === 0) return;
-    await this.redis.sadd(REDIS_KEY_PREFIX + pageId, ...userIds);
+    const set = this.contributors.get(pageId) ?? new Set<string>();
+    userIds.forEach((id) => set.add(id));
+    this.contributors.set(pageId, set);
   }
 
   async popContributors(pageId: string): Promise<string[]> {
-    const key = REDIS_KEY_PREFIX + pageId;
-    const count = await this.redis.scard(key);
-    if (count === 0) return [];
-    return await this.redis.spop(key, count);
+    const set = this.contributors.get(pageId);
+    this.contributors.delete(pageId);
+    return set ? [...set] : [];
   }
 
   async clearContributors(pageId: string): Promise<void> {
-    await this.redis.del(REDIS_KEY_PREFIX + pageId);
+    this.contributors.delete(pageId);
   }
 }

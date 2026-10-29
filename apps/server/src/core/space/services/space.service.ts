@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { CreateSpaceDto } from '../dto/create-space.dto';
+import { InjectQueue, Queue } from '../../../integrations/queue/local-queue';
 import { PaginationOptions } from '@docmost/db/pagination/pagination-options';
 import { SpaceRepo } from '@docmost/db/repos/space/space.repo';
 import { KyselyDB, KyselyTransaction } from '@docmost/db/types/kysely.types';
@@ -16,9 +17,7 @@ import { InjectKysely } from 'nestjs-kysely';
 import { Feature } from '../../../common/features';
 import { SpaceMemberService } from './space-member.service';
 import { SpaceRole } from '../../../common/helpers/types/permission';
-import { QueueJob, QueueName } from 'src/integrations/queue/constants';
-import { Queue } from 'bullmq';
-import { InjectQueue } from '@nestjs/bullmq';
+import { QueueJob, QueueName } from '../../../integrations/queue/constants';
 import { CursorPaginationResult } from '@docmost/db/pagination/cursor-pagination';
 import { ShareRepo } from '@docmost/db/repos/share/share.repo';
 import { WorkspaceRepo } from '@docmost/db/repos/workspace/workspace.repo';

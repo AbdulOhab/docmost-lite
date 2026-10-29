@@ -7,8 +7,6 @@ const APP_ROUTE = {
     LOGIN: "/login",
     SIGNUP: "/signup",
     SETUP: "/setup/register",
-    FORGOT_PASSWORD: "/forgot-password",
-    PASSWORD_RESET: "/password-reset",
     CREATE_WORKSPACE: "/create",
     SELECT_WORKSPACE: "/select",
     MFA_CHALLENGE: "/login/mfa",

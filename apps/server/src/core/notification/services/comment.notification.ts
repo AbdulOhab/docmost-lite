@@ -10,9 +10,6 @@ import { NotificationType } from '../notification.constants';
 import { SpaceMemberRepo } from '@docmost/db/repos/space/space-member.repo';
 import { PagePermissionRepo } from '@docmost/db/repos/page/page-permission.repo';
 import { WatcherRepo } from '@docmost/db/repos/watcher/watcher.repo';
-import { CommentMentionEmail } from '@docmost/transactional/emails/comment-mention-email';
-import { CommentCreateEmail } from '@docmost/transactional/emails/comment-created-email';
-import { CommentResolvedEmail } from '@docmost/transactional/emails/comment-resolved-email';
 import { getPageTitle } from '../../../common/helpers';
 
 @Injectable()
@@ -88,13 +85,6 @@ export class CommentNotificationService {
       });
       if (!notification) continue;
 
-      await this.notificationService.queueEmail(
-        userId,
-        notification.id,
-        `${actor.name} mentioned you in a comment`,
-        CommentMentionEmail({ actorName: actor.name, pageTitle, commentUrl }),
-        NotificationType.COMMENT_USER_MENTION,
-      );
 
       notifiedUserIds.add(userId);
     }
@@ -114,13 +104,6 @@ export class CommentNotificationService {
       });
       if (!notification) continue;
 
-      await this.notificationService.queueEmail(
-        recipientId,
-        notification.id,
-        `${actor.name} commented on ${pageTitle}`,
-        CommentCreateEmail({ actorName: actor.name, pageTitle, commentUrl }),
-        NotificationType.COMMENT_CREATED,
-      );
     }
   }
 
@@ -179,13 +162,6 @@ export class CommentNotificationService {
 
     const subject = `${actor.name} resolved a comment on ${pageTitle}`;
 
-    await this.notificationService.queueEmail(
-      commentCreatorId,
-      notification.id,
-      subject,
-      CommentResolvedEmail({ actorName: actor.name, pageTitle, commentUrl }),
-      NotificationType.COMMENT_RESOLVED,
-    );
   }
 
   private async getThreadParticipantIds(

@@ -1,7 +1,5 @@
-import { Logger, OnModuleDestroy } from '@nestjs/common';
-import { OnWorkerEvent, Processor, WorkerHost } from '@nestjs/bullmq';
-import { InjectQueue } from '@nestjs/bullmq';
-import { Job, Queue } from 'bullmq';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { InjectQueue, Job, Queue } from '../../integrations/queue/local-queue';
 import { QueueJob, QueueName } from '../../integrations/queue/constants';
 import {
   IPageBacklinkJob,
@@ -20,22 +18,25 @@ import { CollabHistoryService } from '../services/collab-history.service';
 import { WatcherService } from '../../core/watcher/watcher.service';
 import { isEmptyParagraphDoc } from '../collaboration.util';
 
-@Processor(QueueName.HISTORY_QUEUE)
-export class HistoryProcessor extends WorkerHost implements OnModuleDestroy {
+@Injectable()
+export class HistoryProcessor implements OnModuleInit {
   private readonly logger = new Logger(HistoryProcessor.name);
 
   constructor(
+    @InjectQueue(QueueName.HISTORY_QUEUE) private readonly queue: Queue,
     private readonly pageHistoryRepo: PageHistoryRepo,
     private readonly pageRepo: PageRepo,
     private readonly collabHistory: CollabHistoryService,
     private readonly watcherService: WatcherService,
     @InjectQueue(QueueName.NOTIFICATION_QUEUE) private notificationQueue: Queue,
     @InjectQueue(QueueName.GENERAL_QUEUE) private generalQueue: Queue,
-  ) {
-    super();
+  ) {}
+
+  onModuleInit() {
+    this.queue.process((job) => this.process(job));
   }
 
-  async process(job: Job<IPageHistoryJob, void>): Promise<void> {
+  async process(job: Job<IPageHistoryJob>): Promise<void> {
     if (job.name !== QueueJob.PAGE_HISTORY) return;
 
     try {
@@ -119,24 +120,6 @@ export class HistoryProcessor extends WorkerHost implements OnModuleDestroy {
       }
     } catch (err) {
       throw err;
-    }
-  }
-
-  @OnWorkerEvent('active')
-  onActive(job: Job) {
-    this.logger.debug(`Processing ${job.name} for page: ${job.data.pageId}`);
-  }
-
-  @OnWorkerEvent('failed')
-  onError(job: Job) {
-    this.logger.error(
-      `Failed ${job.name} for page: ${job.data.pageId}. Reason: ${job.failedReason}`,
-    );
-  }
-
-  async onModuleDestroy(): Promise<void> {
-    if (this.worker) {
-      await this.worker.close();
     }
   }
 }

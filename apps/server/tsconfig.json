@@ -9,7 +9,6 @@
     "target": "ES2021",
     "sourceMap": true,
     "outDir": "./dist",
-    "baseUrl": "./",
     "incremental": true,
     "skipLibCheck": true,
     "strictNullChecks": false,
@@ -21,7 +20,6 @@
     "jsx": "react",
     "paths": {
       "@docmost/db/*": ["./src/database/*"],
-      "@docmost/transactional/*": ["./src/integrations/transactional/*"],
       "@docmost/ee/*": ["./src/ee/*"],
       "@docmost/base-formula/server": [
         "../../packages/base-formula/dist/index.server.d.ts"

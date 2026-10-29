@@ -1,9 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { InjectQueue, Queue } from '../../../integrations/queue/local-queue';
 import { Interval } from '@nestjs/schedule';
 import { InjectKysely } from 'nestjs-kysely';
 import { KyselyDB } from '@docmost/db/types/kysely.types';
-import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bullmq';
 import { QueueJob, QueueName } from '../../../integrations/queue/constants';
 
 const DEFAULT_RETENTION_DAYS = 30;

@@ -17,8 +17,7 @@ import { resolveRelativeAttachmentPath } from '../utils/import.utils';
 import { imageDimensionsFromData } from 'image-dimensions';
 import { load } from 'cheerio';
 import pLimit from 'p-limit';
-import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bullmq';
+import { InjectQueue, Queue } from '../../queue/local-queue';
 import { QueueJob, QueueName } from '../../queue/constants';
 
 interface AttachmentInfo {

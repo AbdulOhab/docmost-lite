@@ -5,9 +5,8 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bullmq';
 import { CreateCommentDto, yjsSelectionSchema } from './dto/create-comment.dto';
+import { InjectQueue, Queue } from '../../integrations/queue/local-queue';
 import { CollaborationGateway } from '../../collaboration/collaboration.gateway';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 import { CommentRepo } from '@docmost/db/repos/comment/comment.repo';

@@ -12,8 +12,6 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { RedisService } from '@nestjs-labs/nestjs-ioredis';
-import type { Redis } from 'ioredis';
 import { TokenService } from '../../core/auth/services/token.service';
 import { UserRepo } from '@docmost/db/repos/user/user.repo';
 import { PageRepo } from '@docmost/db/repos/page/page.repo';
@@ -24,8 +22,10 @@ import { Page, User } from '@docmost/db/types/entity.types';
 import { SpaceRole } from '../../common/helpers/types/permission';
 import { isUserDisabled } from '../../common/helpers';
 import { getPageId } from '../collaboration.util';
-import { COLLAB_ACCESS_RECHECK_CHANNEL } from '../constants';
-import { CollabAccessRecheck } from '../services/collab-access.service';
+import {
+  CollabAccessRecheck,
+  CollabAccessService,
+} from '../services/collab-access.service';
 import { JwtCollabPayload, JwtType } from '../../core/auth/dto/jwt-payload';
 
 type CollabAccess = 'none' | 'read' | 'write';
@@ -34,7 +34,6 @@ type CollabAccess = 'none' | 'read' | 'write';
 export class AuthenticationExtension implements Extension {
   private readonly logger = new Logger(AuthenticationExtension.name);
   private instance: Hocuspocus;
-  private subscriber: Redis;
 
   constructor(
     private tokenService: TokenService,
@@ -42,32 +41,16 @@ export class AuthenticationExtension implements Extension {
     private pageRepo: PageRepo,
     private readonly spaceMemberRepo: SpaceMemberRepo,
     private readonly pagePermissionRepo: PagePermissionRepo,
-    private readonly redisService: RedisService,
+    private readonly collabAccessService: CollabAccessService,
   ) {}
 
   async onConfigure({ instance }: onConfigurePayload) {
     this.instance = instance;
-    this.subscriber = this.redisService.getOrThrow().duplicate();
-    this.subscriber.on('error', () => {});
-    this.subscriber.on('message', async (_channel, message) => {
-      try {
-        await this.recheckAccess(JSON.parse(message));
-      } catch (err) {
-        this.logger.error({ err }, 'Failed to recheck collab access');
-      }
-    });
-    // resubscribe on every ready, ioredis never replays a SUBSCRIBE that failed while redis was down
-    this.subscriber.on('ready', () => {
-      this.subscriber
-        .subscribe(COLLAB_ACCESS_RECHECK_CHANNEL)
-        .catch((err) =>
-          this.logger.error({ err }, 'Failed to subscribe to collab rechecks'),
-        );
-    });
-  }
-
-  async onDestroy() {
-    this.subscriber?.disconnect();
+    this.collabAccessService.onRecheck((recheck) =>
+      this.recheckAccess(recheck).catch((err) =>
+        this.logger.error({ err }, 'Failed to recheck collab access'),
+      ),
+    );
   }
 
   async onAuthenticate(data: onAuthenticatePayload) {

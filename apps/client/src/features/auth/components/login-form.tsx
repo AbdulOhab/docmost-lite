@@ -109,17 +109,6 @@ export function LoginForm() {
                   {...form.getInputProps("password")}
                 />
 
-                <Group justify="flex-end" mt="sm">
-                  <Anchor
-                    to={APP_ROUTE.AUTH.FORGOT_PASSWORD}
-                    component={Link}
-                    underline="never"
-                    size="sm"
-                  >
-                    {t("Forgot your password?")}
-                  </Anchor>
-                </Group>
-
                 <Button type="submit" fullWidth mt="md" loading={isLoading}>
                   {t("Sign In")}
                 </Button>

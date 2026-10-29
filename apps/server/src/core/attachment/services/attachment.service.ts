@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Readable } from 'stream';
+import { InjectQueue, Queue } from '../../../integrations/queue/local-queue';
 import { StorageService } from '../../../integrations/storage/storage.service';
 import { MultipartFile } from '@fastify/multipart';
 import {
@@ -23,9 +24,7 @@ import { executeTx } from '@docmost/db/utils';
 import { UserRepo } from '@docmost/db/repos/user/user.repo';
 import { WorkspaceRepo } from '@docmost/db/repos/workspace/workspace.repo';
 import { SpaceRepo } from '@docmost/db/repos/space/space.repo';
-import { InjectQueue } from '@nestjs/bullmq';
 import { QueueJob, QueueName } from '../../../integrations/queue/constants';
-import { Queue } from 'bullmq';
 import { createByteCountingStream } from '../../../common/helpers/utils';
 
 @Injectable()

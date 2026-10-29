@@ -1,9 +1,8 @@
 import { Menu, ActionIcon, Text } from "@mantine/core";
 import React from "react";
-import { IconCopy, IconDots, IconSend, IconTrash } from "@tabler/icons-react";
+import { IconCopy, IconDots, IconTrash } from "@tabler/icons-react";
 import { modals } from "@mantine/modals";
 import {
-  useResendInvitationMutation,
   useRevokeInvitationMutation,
 } from "@/features/workspace/queries/workspace-query.ts";
 import { useTranslation } from "react-i18next";
@@ -18,7 +17,6 @@ interface Props {
 }
 export default function InviteActionMenu({ invitationId }: Props) {
   const { t } = useTranslation();
-  const resendInvitationMutation = useResendInvitationMutation();
   const revokeInvitationMutation = useRevokeInvitationMutation();
   const { isAdmin } = useUserRole();
   const clipboard = useClipboard();
@@ -36,10 +34,6 @@ export default function InviteActionMenu({ invitationId }: Props) {
         color: "red",
       });
     }
-  };
-
-  const onResend = async () => {
-    await resendInvitationMutation.mutateAsync({ invitationId });
   };
 
   const onRevoke = async () => {
@@ -93,13 +87,6 @@ export default function InviteActionMenu({ invitationId }: Props) {
             </Menu.Item>
           )}
 
-          <Menu.Item
-            onClick={onResend}
-            leftSection={<IconSend size={16} />}
-            disabled={!isAdmin}
-          >
-            {t("Resend invitation")}
-          </Menu.Item>
           <Menu.Divider />
           <Menu.Item
             c="red"
