@@ -1,6 +1,6 @@
 {
-  "name": "Docmost",
-  "short_name": "Docmost",
+  "name": "Docmost-Lite",
+  "short_name": "Docmost-Lite",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#222",

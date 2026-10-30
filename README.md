@@ -1,4 +1,4 @@
-# Docmost Lite
+# Docmost-Lite
 
 A slimmed-down fork of [Docmost](https://github.com/docmost/docmost) (v0.97.0) for
 personal, single-server use. It needs only **Node.js and PostgreSQL**: no Redis, no
@@ -9,6 +9,7 @@ email service, no external search engine.
 - Real-time collaborative editing
 - A **Diagrams** section: full-page Excalidraw editor with autosave, PNG/SVG export and a gallery
 - Diagrams (Excalidraw, Mermaid)
+- A **Kanban** section: boards with draggable columns and cards, colours, due dates, autosave and MCP tools
 - Spaces, groups and space-level permissions
 - Comments, page history, search (PostgreSQL full-text)
 - File attachments on local disk
@@ -87,6 +88,17 @@ Pick one:
 This build is for one person: the owner account is created by the seeder or the
 setup page. Inviting other members was removed. (The database tables still exist;
 only the server endpoints and screens are gone.)
+
+## Kanban
+
+**Kanban** in the sidebar lists your boards. A board has columns (default To do / Doing /
+Done) and cards (title, description, colour, due date). Drag cards between columns and
+drag columns by their grip to reorder; changes autosave. A board is a normal page holding
+one JSON block, kept in a space called *Kanban* (created with the first board), so search,
+history, trash and export work. MCP tools: `list_boards`, `get_board`, `create_board`,
+`add_column`, `add_card`, `update_card`, `move_card` (write scope), `delete_card`,
+`delete_column` (delete scope). There is no live sync: a board open in a browser overwrites
+MCP changes made after it was loaded the next time it saves, so reload after MCP edits.
 
 ## Diagrams
 

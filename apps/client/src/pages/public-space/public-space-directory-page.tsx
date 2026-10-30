@@ -224,7 +224,7 @@ export default function PublicSpaceDirectoryPage() {
                 target="_blank"
                 rel="noreferrer"
               >
-                Docmost
+                Docmost-Lite
               </a>
             </div>
           </div>

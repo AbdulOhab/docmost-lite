@@ -35,6 +35,9 @@ const red: MantineColorsTuple = [
 ];
 
 export const theme = createTheme({
+  // Kalpurush only covers Bengali characters (see styles/bangla-font.css)
+  fontFamily:
+    'Kalpurush, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
   colors: {
     blue,
     red,

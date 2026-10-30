@@ -1,0 +1,10 @@
+/* Kalpurush (Bangla). The unicode-range limits it to Bengali characters, so the
+   browser only downloads it when a page contains Bangla text; Latin text keeps the UI font. */
+@font-face {
+  font-family: "Kalpurush";
+  src: url("../assets/fonts/kalpurush.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0980-09FF, U+200C-200D, U+25CC;
+}

@@ -32,6 +32,7 @@ import {
   searchSpotlight,
   shareSearchSpotlight,
 } from "@/features/search/constants.ts";
+import { ThemeToggle } from "@/components/theme-toggle.tsx";
 import { NotificationPopover } from "@/features/notification/components/notification-popover.tsx";
 import { workspaceAtom } from "@/features/user/atoms/current-user-atom.ts";
 
@@ -84,11 +85,11 @@ export function AppHeader() {
             />
           </Tooltip>
 
-          <Link to="/home" className={classes.brand} aria-label="Docmost">
+          <Link to="/home" className={classes.brand} aria-label="Docmost-Lite">
             <Box hiddenFrom="sm" className={classes.brandIcon}>
               <img
                 src="/icons/favicon-32x32.png"
-                alt="Docmost"
+                alt="Docmost-Lite"
                 width={22}
                 height={22}
               />
@@ -99,7 +100,7 @@ export function AppHeader() {
               style={{ userSelect: "none" }}
               visibleFrom="sm"
             >
-              Docmost
+              Docmost-Lite
             </Text>
           </Link>
 
@@ -162,6 +163,7 @@ export function AppHeader() {
             </>
           )}
           <NotificationPopover />
+          <ThemeToggle />
           {isCloud() && isTrial && trialDaysLeft !== 0 && (
             <Badge
               variant="light"

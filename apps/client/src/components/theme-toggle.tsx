@@ -12,16 +12,18 @@ export function ThemeToggle() {
   const computedColorScheme = useComputedColorScheme();
 
   return (
-    <Tooltip label="Toggle Color Scheme">
+    <Tooltip label="Toggle Color Scheme" withArrow>
       <ActionIcon
-        variant="default"
+        variant="subtle"
+        color="dark"
+        size="sm"
         onClick={() => {
           setColorScheme(computedColorScheme === "light" ? "dark" : "light");
         }}
         aria-label="Toggle color scheme"
       >
-        <IconSun className={classes.light} size={18} stroke={1.5} />
-        <IconMoon className={classes.dark} size={18} stroke={1.5} />
+        <IconSun className={classes.light} size={20} stroke={1.5} />
+        <IconMoon className={classes.dark} size={20} stroke={1.5} />
       </ActionIcon>
     </Tooltip>
   );
