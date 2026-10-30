@@ -1,12 +1,8 @@
 import api from "@/lib/api-client";
 import { IUser } from "@/features/user/types/user.types";
 import {
-  ICreateInvite,
-  IInvitation,
   IWorkspace,
-  IAcceptInvite,
   IPublicWorkspace,
-  IInvitationLink,
   IVersion,
 } from "../types/workspace.types";
 import { IPagination, QueryParams } from "@/lib/types.ts";
@@ -64,45 +60,6 @@ export async function changeMemberRole(data: {
   role: string;
 }): Promise<void> {
   await api.post("/workspace/members/change-role", data);
-}
-
-export async function getPendingInvitations(
-  params?: QueryParams,
-): Promise<IPagination<IInvitation>> {
-  const req = await api.post("/workspace/invites", params);
-  return req.data;
-}
-
-export async function createInvitation(data: ICreateInvite) {
-  const req = await api.post("/workspace/invites/create", data);
-  return req.data;
-}
-
-export async function acceptInvitation(
-  data: IAcceptInvite,
-): Promise<{ requiresLogin?: boolean }> {
-  const req = await api.post("/workspace/invites/accept", data);
-  return req.data;
-}
-
-export async function getInviteLink(data: {
-  invitationId: string;
-}): Promise<IInvitationLink> {
-  const req = await api.post("/workspace/invites/link", data);
-  return req.data;
-}
-
-export async function revokeInvitation(data: {
-  invitationId: string;
-}): Promise<void> {
-  await api.post("/workspace/invites/revoke", data);
-}
-
-export async function getInvitationById(data: {
-  invitationId: string;
-}): Promise<IInvitation> {
-  const req = await api.post("/workspace/invites/info", data);
-  return req.data;
 }
 
 export async function createWorkspace(

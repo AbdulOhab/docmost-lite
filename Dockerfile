@@ -46,8 +46,6 @@ COPY --from=builder /app/packages/base-formula/package.json /app/packages/base-f
 COPY --from=builder /app/package.json /app/package.json
 COPY --from=builder /app/pnpm*.yaml /app/
 
-# Copy patches
-COPY --from=builder /app/patches /app/patches
 
 RUN chown -R node:node /app
 

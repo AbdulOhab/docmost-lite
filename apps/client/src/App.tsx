@@ -32,7 +32,6 @@ const AccountPreferences = lazyWithPrefetch(
 );
 const SpaceHome = lazyWithPrefetch(() => import("@/pages/space/space-home.tsx"));
 const PageRedirect = lazyWithPrefetch(() => import("@/pages/page/page-redirect.tsx"));
-const InviteSignup = lazyWithPrefetch(() => import("@/pages/auth/invite-signup.tsx"));
 const Billing = lazyWithPrefetch(() => import("@/ee/billing/pages/billing.tsx"));
 const CloudLogin = lazyWithPrefetch(() => import("@/ee/pages/cloud-login.tsx"));
 const CreateWorkspace = lazyWithPrefetch(() => import("@/ee/pages/create-workspace.tsx"));
@@ -40,6 +39,10 @@ const Security = lazyWithPrefetch(() => import("@/ee/security/pages/security.tsx
 const License = lazyWithPrefetch(() => import("@/ee/licence/pages/license.tsx"));
 const SharedPage = lazyWithPrefetch(() => import("@/pages/share/shared-page.tsx"));
 const PdfRenderPage = lazyWithPrefetch(() => import("@/ee/pdf-export/pdf-render-page.tsx"));
+const Diagrams = lazyWithPrefetch(() => import("@/pages/diagrams/diagrams.tsx"));
+const DiagramEditor = lazyWithPrefetch(() => import("@/pages/diagrams/diagram-editor.tsx"));
+const DiagramLibraries = lazyWithPrefetch(() => import("@/pages/settings/diagram-libraries.tsx"));
+const McpSettings = lazyWithPrefetch(() => import("@/pages/settings/mcp/mcp-settings.tsx"));
 const Shares = lazyWithPrefetch(() => import("@/pages/settings/shares/shares.tsx"));
 const ShareLayout = lazyWithPrefetch(
   () => import("@/features/share/components/share-layout.tsx"),
@@ -85,9 +88,6 @@ const AiChat = lazyWithPrefetch(() => import("@/ee/ai-chat/pages/ai-chat.tsx"));
 const VerifyEmail = lazyWithPrefetch(() => import("@/ee/pages/verify-email.tsx"));
 const LabelPage = lazyWithPrefetch(() => import("@/pages/label/label-page"));
 const OAuthConsent = lazyWithPrefetch(() => import("@/ee/oauth/pages/oauth-consent.tsx"));
-const Integrations = lazyWithPrefetch(
-  () => import("@/features/integration/pages/integrations.tsx"),
-);
 const Connections = lazyWithPrefetch(
   () => import("@/features/integration/pages/connections.tsx"),
 );
@@ -111,7 +111,6 @@ export default function App() {
       <Routes>
         <Route index element={<Navigate to="/home" />} />
         <Route path={"/login"} element={<LoginPage />} />
-        <Route path={"/invites/:invitationId"} element={<InviteSignup />} />
         <Route path={"/login/mfa"} element={<MfaChallengePage />} />
         <Route path={"/login/mfa/setup"} element={<MfaSetupRequiredPage />} />
         <Route path={"/oauth/consent"} element={<OAuthConsent />} />
@@ -148,18 +147,14 @@ export default function App() {
         <Route path={"/pdf-render/:pageId"} element={<PdfRenderPage />} />
         <Route path={"/share/:shareId"} element={<ShareRedirect />} />
         <Route path={"/p/:pageSlug"} element={<PageRedirect />} />
-        <Route
-          path={"/integrations/slack/link"}
-          element={
-            <Navigate to="/settings/account/connections?connect=slack" replace />
-          }
-        />
 
         <Route element={<Layout />}>
           <Route path={"/home"} element={<Home />} />
           <Route path={"/ai"} element={<AiChat />} />
           <Route path={"/ai/chat/:chatId"} element={<AiChat />} />
           <Route path={"/spaces"} element={<SpacesPage />} />
+          <Route path={"/diagrams"} element={<Diagrams />} />
+          <Route path={"/diagrams/:pageId"} element={<DiagramEditor />} />
           <Route path={"/favorites"} element={<FavoritesPage />} />
           <Route path={"/labels/:labelName"} element={<LabelPage />} />
           <Route path={"/templates"} element={<TemplateList />} />
@@ -195,6 +190,8 @@ export default function App() {
             <Route path={"groups/:groupId"} element={<GroupInfo />} />
             <Route path={"spaces"} element={<Spaces />} />
             <Route path={"sharing"} element={<Shares />} />
+            <Route path={"mcp"} element={<McpSettings />} />
+            <Route path={"diagram-libraries"} element={<DiagramLibraries />} />
             <Route path={"security"} element={<Security />} />
             <Route path={"ai"} element={<AiSettings />} />
             <Route path={"ai/mcp"} element={<AiSettings />} />
@@ -205,7 +202,6 @@ export default function App() {
               element={<Navigate to="/settings/audit/siem" replace />}
             />
             <Route path={"verifications"} element={<VerifiedPages />} />
-            <Route path={"integrations"} element={<Integrations />} />
             {!isCloud() && <Route path={"license"} element={<License />} />}
             {isCloud() && <Route path={"billing"} element={<Billing />} />}
           </Route>

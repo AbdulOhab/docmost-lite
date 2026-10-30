@@ -1,3 +1,4 @@
+import { MCP_SCOPES, McpScope, McpToken } from '../../mcp/mcp.constants';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import ms, { StringValue } from 'ms';
@@ -73,11 +74,15 @@ export class EnvironmentService {
   }
 
   getFileUploadSizeLimit(): string {
-    return this.configService.get<string>('FILE_UPLOAD_SIZE_LIMIT', '50mb');
+    return this.configService.get<string>('FILE_UPLOAD_SIZE_LIMIT') || '50mb';
+  }
+
+  getDrawioUrl(): string {
+    return this.configService.get<string>('DRAWIO_URL') || undefined;
   }
 
   getFileImportSizeLimit(): string {
-    return this.configService.get<string>('FILE_IMPORT_SIZE_LIMIT', '200mb');
+    return this.configService.get<string>('FILE_IMPORT_SIZE_LIMIT') || '200mb';
   }
 
   getOwnerSeed(): {
@@ -101,8 +106,48 @@ export class EnvironmentService {
     };
   }
 
-  getDrawioUrl(): string {
-    return this.configService.get<string>('DRAWIO_URL');
+  /**
+   * MCP access tokens. Either
+   *   MCP_TOKEN=<secret> with MCP_SCOPES=read,write (default) or
+   *   MCP_TOKENS="<secretA>=read;<secretB>=read,write,delete".
+   * Scopes: read, write, delete ("all" grants every scope).
+   */
+  getMcpTokens(): McpToken[] {
+    const parseScopes = (raw: string): Set<McpScope> => {
+      const names = raw
+        .split(',')
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean);
+      return new Set(
+        names.includes('all')
+          ? MCP_SCOPES
+          : (names.filter((n) => (MCP_SCOPES as readonly string[]).includes(n)) as McpScope[]),
+      );
+    };
+
+    const entries: McpToken[] = [];
+    const single = this.configService.get<string>('MCP_TOKEN');
+    if (single) {
+      entries.push({
+        token: single,
+        scopes: parseScopes(
+          this.configService.get<string>('MCP_SCOPES') || 'read,write',
+        ),
+      });
+    }
+
+    const many = this.configService.get<string>('MCP_TOKENS');
+    for (const part of (many ?? '').split(';')) {
+      const i = part.indexOf('=');
+      if (i < 1) continue;
+      entries.push({
+        token: part.slice(0, i).trim(),
+        scopes: parseScopes(part.slice(i + 1)),
+      });
+    }
+
+    // a short token is guessable, so it is ignored rather than accepted
+    return entries.filter((e) => e.token.length >= 24 && e.scopes.size > 0);
   }
 
   isCloud(): boolean {

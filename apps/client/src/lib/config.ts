@@ -112,5 +112,6 @@ function getConfigValue(key: string, defaultValue: string = undefined): string {
   const rawValue = import.meta.env.DEV
     ? process?.env?.[key]
     : window?.CONFIG?.[key];
-  return rawValue ?? defaultValue;
+  // an empty string (e.g. a blank variable in .env) counts as "not set"
+  return rawValue || defaultValue;
 }

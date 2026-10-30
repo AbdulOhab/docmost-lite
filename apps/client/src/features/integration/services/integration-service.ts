@@ -16,9 +16,9 @@ export async function getAvailableIntegrations(): Promise<
   return req.data;
 }
 
+// This build ships without integrations, so nothing is ever installed.
 export async function getInstalledIntegrations(): Promise<Integration[]> {
-  const req = await api.post<Integration[]>("/integrations");
-  return req.data;
+  return [];
 }
 
 export async function uninstallIntegration(data: {

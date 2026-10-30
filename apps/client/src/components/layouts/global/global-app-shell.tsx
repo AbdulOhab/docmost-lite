@@ -22,6 +22,7 @@ import classes from "./app-shell.module.css";
 import { useTrialEndAction } from "@/ee/hooks/use-trial-end-action.tsx";
 import { useToggleSidebar } from "@/components/layouts/global/hooks/hooks/use-toggle-sidebar.ts";
 import GlobalSidebar from "@/components/layouts/global/global-sidebar.tsx";
+import DiagramsSidebar from "@/features/diagrams/diagrams-sidebar.tsx";
 import { ASIDE_PANEL_ID } from "@/hooks/use-toggle-aside.tsx";
 import { MAIN_CONTENT_ID, SkipToMain } from "@/components/ui/skip-to-main.tsx";
 
@@ -83,8 +84,10 @@ export default function GlobalAppShell({
   const isSettingsRoute = location.pathname.startsWith("/settings");
   const isSpaceRoute = location.pathname.startsWith("/s/");
   const isAiRoute = location.pathname.startsWith("/ai");
+  const isDiagramsRoute = location.pathname.startsWith("/diagrams");
   const isPageRoute = location.pathname.includes("/p/");
-  const showGlobalSidebar = !isSpaceRoute && !isSettingsRoute && !isAiRoute;
+  const showGlobalSidebar =
+    !isSpaceRoute && !isSettingsRoute && !isAiRoute && !isDiagramsRoute;
 
   return (
     <>
@@ -122,7 +125,9 @@ export default function GlobalAppShell({
               ? t("Settings navigation")
               : isAiRoute
                 ? t("AI navigation")
-                : t("Main navigation")
+                : isDiagramsRoute
+                  ? t("Diagrams navigation")
+                  : t("Main navigation")
         }
       >
         {isSpaceRoute && (
@@ -130,6 +135,7 @@ export default function GlobalAppShell({
         )}
         {isSpaceRoute && <SpaceSidebar />}
         {isSettingsRoute && <SettingsSidebar />}
+        {isDiagramsRoute && <DiagramsSidebar />}
         {isAiRoute && (
           <React.Suspense fallback={null}>
             <AiChatSidebar />

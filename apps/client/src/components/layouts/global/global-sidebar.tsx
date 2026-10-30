@@ -7,7 +7,7 @@ import {
   IconLayoutGrid,
   IconSettings,
   IconUserPlus,
-  IconTemplate,
+  IconScribble,
 } from "@tabler/icons-react";
 import { Link, useLocation } from "react-router-dom";
 import classes from "./global-sidebar.module.css";
@@ -18,12 +18,8 @@ import { useToggleSidebar } from "@/components/layouts/global/hooks/hooks/use-to
 import { useFavoritesQuery } from "@/features/favorite/queries/favorite-query";
 import { getSpaceUrl } from "@/lib/config";
 import { useDisclosure } from "@mantine/hooks";
-import { WorkspaceInviteForm } from "@/features/workspace/components/members/components/workspace-invite-form";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
 import { AvatarIconType } from "@/features/attachments/types/attachment.types";
-import { useHasFeature } from "@/ee/hooks/use-feature";
-import { Feature } from "@/ee/features";
-import { useUpgradeLabel } from "@/ee/hooks/use-upgrade-label";
 
 export default function GlobalSidebar() {
   const { t } = useTranslation();
@@ -31,18 +27,11 @@ export default function GlobalSidebar() {
   const [active, setActive] = useState(location.pathname);
   const [mobileSidebarOpened] = useAtom(mobileSidebarAtom);
   const toggleMobileSidebar = useToggleSidebar(mobileSidebarAtom);
-  const hasTemplates = useHasFeature(Feature.TEMPLATES);
-  const upgradeLabel = useUpgradeLabel();
   const mainNavItems = [
     { label: "Home", icon: IconHome, path: "/home" },
     { label: "Favorites", icon: IconStar, path: "/favorites" },
     { label: "Spaces", icon: IconLayoutGrid, path: "/spaces" },
-    {
-      label: "Templates",
-      icon: IconTemplate,
-      path: "/templates",
-      disabled: !hasTemplates,
-    },
+    { label: "Diagrams", icon: IconScribble, path: "/diagrams" },
   ];
   const { data: favoriteSpacesData, isPending: isFavoritesPending } = useFavoritesQuery("space");
   const favoriteSpaces = favoriteSpacesData?.pages.flatMap((p) => p.items) ?? [];
@@ -52,8 +41,6 @@ export default function GlobalSidebar() {
       const cmp = (a.space!.name ?? "").localeCompare(b.space!.name ?? "", undefined, { sensitivity: "base" });
       return cmp !== 0 ? cmp : a.id.localeCompare(b.id);
     });
-  const [inviteOpened, { open: openInvite, close: closeInvite }] =
-    useDisclosure(false);
 
   useEffect(() => {
     setActive(location.pathname);
@@ -69,38 +56,19 @@ export default function GlobalSidebar() {
     <div className={classes.navbar}>
       <ScrollArea w="100%" style={{ flex: 1 }}>
         <div className={classes.section}>
-          {mainNavItems.map((item) =>
-            item.disabled ? (
-              <Tooltip
-                key={item.label}
-                label={upgradeLabel}
-                position="right"
-                withArrow
-              >
-                <UnstyledButton
-                  className={classes.link}
-                  data-disabled
-                  aria-disabled="true"
-                  tabIndex={-1}
-                >
-                  <item.icon className={classes.linkIcon} stroke={2} />
-                  <span>{t(item.label)}</span>
-                </UnstyledButton>
-              </Tooltip>
-            ) : (
-              <Link
-                key={item.label}
-                className={classes.link}
-                data-active={active === item.path || undefined}
-                aria-current={active === item.path ? "page" : undefined}
-                to={item.path}
-                onClick={handleNavClick}
-              >
-                <item.icon className={classes.linkIcon} stroke={2} />
-                <span>{t(item.label)}</span>
-              </Link>
-            ),
-          )}
+          {mainNavItems.map((item) => (
+            <Link
+              key={item.label}
+              className={classes.link}
+              data-active={active === item.path || undefined}
+              aria-current={active === item.path ? "page" : undefined}
+              to={item.path}
+              onClick={handleNavClick}
+            >
+              <item.icon className={classes.linkIcon} stroke={2} />
+              <span>{t(item.label)}</span>
+            </Link>
+          ))}
         </div>
 
         <Divider my="xs" />
@@ -150,13 +118,6 @@ export default function GlobalSidebar() {
       </ScrollArea>
 
       <div className={classes.bottomSection}>
-        <UnstyledButton
-          className={classes.link}
-          onClick={openInvite}
-        >
-          <IconUserPlus className={classes.linkIcon} stroke={2} />
-          <span>{t("Invite People")}</span>
-        </UnstyledButton>
         <Link
           className={classes.link}
           data-active={active.startsWith("/settings") || undefined}
@@ -168,19 +129,6 @@ export default function GlobalSidebar() {
           <span>{t("Settings")}</span>
         </Link>
       </div>
-
-      <Modal
-        size="550"
-        opened={inviteOpened}
-        onClose={closeInvite}
-        title={t("Invite new members")}
-        centered
-      >
-        <Divider size="xs" mb="xs" />
-        <ScrollArea h="80%">
-          <WorkspaceInviteForm onClose={closeInvite} />
-        </ScrollArea>
-      </Modal>
     </div>
   );
 }

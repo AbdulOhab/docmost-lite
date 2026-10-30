@@ -16,6 +16,8 @@ import {
   IconPlug,
   IconHistory,
   IconShieldCheck,
+  IconPlugConnected,
+  IconBooks,
 } from "@tabler/icons-react";
 import { Link, useLocation } from "react-router-dom";
 import classes from "./settings.module.css";
@@ -61,6 +63,8 @@ type DataGroup = {
   items: DataItem[];
 };
 
+// Enterprise-only pages (SSO, API keys, AI, audit, verification, license...) are
+// intentionally not listed: their server side is not part of this build.
 const groupedData: DataGroup[] = [
   {
     heading: "Account",
@@ -71,18 +75,6 @@ const groupedData: DataGroup[] = [
         icon: IconBrush,
         path: "/settings/account/preferences",
       },
-      {
-        label: "API keys",
-        icon: IconKey,
-        path: "/settings/account/api-keys",
-        feature: Feature.API_KEYS,
-      },
-      {
-        label: "Connections",
-        icon: IconPlug,
-        path: "/settings/account/connections",
-        requiresInstalledIntegration: true,
-      },
     ],
   },
   {
@@ -90,66 +82,11 @@ const groupedData: DataGroup[] = [
     items: [
       { label: "General", icon: IconSettings, path: "/settings/workspace" },
       { label: "Members", icon: IconUsers, path: "/settings/members" },
-      {
-        label: "Billing",
-        icon: IconCoin,
-        path: "/settings/billing",
-        role: "admin",
-        env: "cloud",
-      },
-      {
-        label: "Security & SSO",
-        icon: IconLock,
-        path: "/settings/security",
-        feature: Feature.SECURITY_SETTINGS,
-        role: "admin",
-      },
       { label: "Groups", icon: IconUsersGroup, path: "/settings/groups" },
       { label: "Spaces", icon: IconSpaces, path: "/settings/spaces" },
       { label: "Public sharing", icon: IconWorld, path: "/settings/sharing" },
-      {
-        label: "Verified pages",
-        icon: IconShieldCheck,
-        path: "/settings/verifications",
-        feature: Feature.PAGE_VERIFICATION,
-      },
-      {
-        label: "API management",
-        icon: IconKey,
-        path: "/settings/api-keys",
-        feature: Feature.API_KEYS,
-        role: "admin",
-      },
-      {
-        label: "AI settings",
-        icon: IconSparkles,
-        path: "/settings/ai",
-        role: "admin",
-      },
-      {
-        label: "Audit logs & SIEM",
-        icon: IconHistory,
-        path: "/settings/audit",
-        feature: Feature.AUDIT_LOGS,
-        role: "owner",
-        env: "selfhosted",
-      },
-      {
-        label: "Integrations",
-        icon: IconPlug,
-        path: "/settings/integrations",
-        role: "admin",
-      },
-    ],
-  },
-  {
-    heading: "System",
-    items: [
-      {
-        label: "License & Edition",
-        icon: IconKey,
-        path: "/settings/license",
-      },
+      { label: "MCP", icon: IconPlugConnected, path: "/settings/mcp", role: "admin" },
+      { label: "Diagram libraries", icon: IconBooks, path: "/settings/diagram-libraries", role: "admin" },
     ],
   },
 ];

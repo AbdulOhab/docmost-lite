@@ -7,7 +7,8 @@ email service, no external search engine.
 ## What you get
 
 - Real-time collaborative editing
-- Diagrams (Draw.io, Excalidraw, Mermaid)
+- A **Diagrams** section: full-page Excalidraw editor with autosave, PNG/SVG export and a gallery
+- Diagrams (Excalidraw, Mermaid)
 - Spaces, groups and space-level permissions
 - Comments, page history, search (PostgreSQL full-text)
 - File attachments on local disk
@@ -20,8 +21,9 @@ email service, no external search engine.
 |---|---|
 | Redis (cache, queues, rate limit, WebSocket adapter, collab sync) | In-process equivalents |
 | BullMQ queues | `LocalQueue` (`apps/server/src/integrations/queue/local-queue.ts`) |
-| Email (SMTP, Postmark, templates) | Nothing. Invite by copying the invite link |
-| Forgot password / invite resend | `scripts/reset-password.js` (see below) |
+| Email (SMTP, Postmark, templates) | Nothing |
+| Member invitations and invite sign-up | Nothing. There is one owner account |
+| Forgot password | `scripts/reset-password.js` (see below) |
 | Typesense, AI, billing, telemetry | Nothing |
 | S3 / Azure storage | Local disk only |
 | GitHub / Figma / Linear integrations, OAuth | Nothing |
@@ -80,10 +82,91 @@ Pick one:
 2. **Setup page.** Leave `OWNER_*` empty and open the app; the setup form appears
    while the database is empty.
 
-## Adding people
+## Accounts
 
-Invite emails are not sent. In **Settings → Members → Invitations**, create the
-invitation, then use **Copy link** and send the link yourself.
+This build is for one person: the owner account is created by the seeder or the
+setup page. Inviting other members was removed. (The database tables still exist;
+only the server endpoints and screens are gone.)
+
+## Diagrams
+
+**Diagrams** in the sidebar has its own navigation like a space: a menu (all diagrams,
+new, libraries, trash) and a list of your diagrams. *New diagram* offers three types:
+
+| Type | What you get |
+|---|---|
+| **Excalidraw** | Full-page Excalidraw editor: every tool, autosave and `Ctrl+S`, PNG/SVG export, undo/redo, light and dark theme |
+| **Mermaid** | Code on the left, live preview on the right, autosave, SVG export, and **Convert to Excalidraw** to turn it into editable shapes |
+| **Draw.io** | The full diagrams.net editor. It is loaded from `embed.diagrams.net` (needs internet), or from your own server via `DRAWIO_URL` |
+
+A diagram is a normal page holding one diagram block, kept in a space called
+*Diagrams* (created the first time you make one). So search, page history, share
+links, trash and MCP all work on diagrams. Keep that page for the drawing alone:
+saving replaces its content.
+
+**Library packs (Excalidraw "extensions").** Settings → **Diagram libraries** lets an
+admin upload `.excalidrawlib` files or install packs from the public
+libraries.excalidraw.com catalogue. They are stored on the server, switched on or off
+per pack, and appear in everyone's Excalidraw library panel in any browser. Your own
+saved shapes stay in your browser.
+
+All three types can also be inserted into any page: `/excalidraw`, `/drawio` and
+`/mermaid`.
+
+## MCP (use your pages from an AI assistant)
+
+The server can speak the [Model Context Protocol](https://modelcontextprotocol.io) at
+`POST /mcp`, so Claude Code and other MCP clients can search, read, write and (if you
+allow it) delete pages. It is off until a token exists.
+
+**Create a token in the app:** Settings → **MCP** → *Create token*, give it a name and
+tick the scopes. The token is shown once; only its hash is stored. Revoke it from the
+same page. The page also shows the endpoint and the connect command:
+
+```bash
+claude mcp add --transport http docmost http://localhost:3000/mcp \
+  --header "Authorization: Bearer <your token>"
+```
+
+You can also set tokens in `.env` instead (they appear read-only on the MCP page):
+
+```bash
+openssl rand -hex 32          # put the result in .env as MCP_TOKEN
+MCP_TOKEN=<that value>
+MCP_SCOPES=read,write         # add delete only if you want it
+```
+
+**Diagrams over MCP.** `create_diagram` and `update_diagram` take Mermaid code, or for
+Excalidraw a list of `nodes` and `edges` (positions are worked out for you, with
+shapes, colours and labelled arrows), or raw Excalidraw elements. `get_diagram` reads
+Mermaid code or an Excalidraw drawing back as shapes and arrows. Deleting a diagram
+uses `delete_page`. Draw.io diagrams can be listed but not read or changed.
+
+**Permissions.** Each token carries scopes, and a tool only exists for a token that
+has its scope, so a read-only token cannot even see the write tools.
+
+| Scope | Tools |
+|---|---|
+| `read` | `list_spaces`, `list_pages`, `get_page`, `search_pages`, `recent_pages`, `page_history`, `list_comments`, `list_trash`, `list_diagrams`, `get_diagram` |
+| `write` | `create_space`, `create_page`, `update_page` (replace / append / prepend), `move_page`, `duplicate_page`, `restore_page`, `add_comment`, `create_diagram`, `update_diagram` |
+| `delete` | `delete_page` (to trash), `delete_page_permanently` (needs `confirm: true`), `delete_comment` |
+
+Make one token per tool or machine with only the scopes it needs, for example a
+read-only token for a search helper. In `.env`, several tokens can be listed as
+`MCP_TOKENS="tokenA=read;tokenB=read,write;tokenC=all"`. Only the owner can grant the
+`delete` scope.
+
+Things to know:
+
+- The tools act as the **owner account**, through the normal API, so the usual
+  permission checks still apply. Anyone holding a token can do what its scopes allow
+  to every page. Keep tokens secret, use HTTPS if the app is reachable from outside,
+  and prefer the smallest scope that works.
+- The server signs in as the owner with its own session, which appears once in
+  Settings as an unnamed device.
+- Page content goes in and out as Markdown by default (`format` can be `html` or `json`).
+- Tested with raw JSON-RPC requests against every tool. It has not been tried with a
+  real Claude Code client yet.
 
 ## Reset a password
 
@@ -107,13 +190,14 @@ Copy `.env.example`. The settings that matter:
 
 | Variable | Purpose |
 |---|---|
-| `APP_URL` | Public URL, used for invite links |
+| `APP_URL` | Public URL of the app |
 | `APP_SECRET` | 32+ random characters; changing it signs everyone out |
 | `DATABASE_URL` | PostgreSQL connection string |
 | `PORT` | Default 3000 |
 | `OWNER_EMAIL`, `OWNER_PASSWORD` | Optional first-owner seeder |
 | `FILE_UPLOAD_SIZE_LIMIT`, `FILE_IMPORT_SIZE_LIMIT` | Upload limits (50mb / 200mb) |
-| `DRAWIO_URL` | Custom Draw.io server (optional) |
+| `DRAWIO_URL` | Custom Draw.io server (optional; the default needs internet) |
+| `MCP_TOKEN`, `MCP_SCOPES`, `MCP_TOKENS` | Optional MCP access (see above) |
 
 Put the app behind an HTTPS reverse proxy (Caddy, nginx) if it is reachable from the
 internet.
@@ -129,11 +213,12 @@ re-apply the same idea on a newer upstream version:
 2. Queues: replace `@nestjs/bullmq` with `local-queue.ts` and turn each `@Processor`
    class into a plain provider that calls `queue.process(...)` in `onModuleInit`.
 3. Email: remove `integrations/mail`, `integrations/transactional` and every caller
-   (auth, invitations, notifications).
+   (auth, notifications). Remove the invitation service, endpoints and screens.
 4. Delete search / AI / billing queue producers (`database/listeners`) and the
    unused dependencies.
 5. Storage: keep only `local.driver.ts`.
-6. Add `OwnerSeederService` (`core/auth/services/owner-seeder.service.ts`) and
+6. Add the MCP module (`apps/server/src/mcp`), which wraps the REST API as MCP tools.
+7. Add `OwnerSeederService` (`core/auth/services/owner-seeder.service.ts`) and
    `scripts/reset-password.js`.
 
 Verify with `pnpm build` and by starting the server against an empty database.

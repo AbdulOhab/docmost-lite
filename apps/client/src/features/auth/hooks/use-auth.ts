@@ -12,9 +12,7 @@ import {
   ISetupWorkspace,
 } from "@/features/auth/types/auth.types";
 import { notifications } from "@mantine/notifications";
-import { IAcceptInvite } from "@/features/workspace/types/workspace.types.ts";
 import {
-  acceptInvitation,
   createWorkspace,
 } from "@/features/workspace/services/workspace-service.ts";
 import APP_ROUTE, { getPostLoginRedirect } from "@/lib/app-route.ts";
@@ -59,32 +57,6 @@ export default function useAuth() {
 
       notifications.show({
         message,
-        color: "red",
-      });
-    }
-  };
-
-  const handleInvitationSignUp = async (data: IAcceptInvite) => {
-    setIsLoading(true);
-
-    try {
-      const response = await acceptInvitation(data);
-      setIsLoading(false);
-
-      if (response?.requiresLogin) {
-        notifications.show({
-          message: t(
-            "Account created successfully. Please log in to set up two-factor authentication.",
-          ),
-        });
-        navigate(APP_ROUTE.AUTH.LOGIN);
-      } else {
-        navigate(APP_ROUTE.HOME);
-      }
-    } catch (err) {
-      setIsLoading(false);
-      notifications.show({
-        message: err.response?.data.message,
         color: "red",
       });
     }
@@ -138,7 +110,6 @@ export default function useAuth() {
 
   return {
     signIn: handleSignIn,
-    invitationSignup: handleInvitationSignUp,
     setupWorkspace: handleSetupWorkspace,
     logout: handleLogout,
     isLoading,

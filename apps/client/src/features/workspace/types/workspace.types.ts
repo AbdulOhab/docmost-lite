@@ -79,33 +79,6 @@ export interface IWorkspacePublicSpacesSettings {
   directory?: boolean;
 }
 
-export interface ICreateInvite {
-  role: string;
-  emails: string[];
-  groupIds: string[];
-}
-
-export interface IInvitation {
-  id: string;
-  role: string;
-  email: string;
-  workspaceId: string;
-  invitedById: string;
-  createdAt: Date;
-  enforceSso: boolean;
-}
-
-export interface IInvitationLink {
-  inviteLink: string;
-}
-
-export interface IAcceptInvite {
-  invitationId: string;
-  name: string;
-  password: string;
-  token: string;
-}
-
 export interface IPublicWorkspace {
   id: string;
   name: string;
