@@ -18,6 +18,7 @@ import {
 export enum EncryptionPurpose {
   SIEM_CREDENTIALS = 'siem-credentials',
   INTEGRATION_TOKENS = 'integration-tokens',
+  AI_API_KEYS = 'ai-api-keys',
   OAUTH_COMPLETION = 'oauth-completion',
 }
 

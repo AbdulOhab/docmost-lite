@@ -10,8 +10,8 @@ import { SessionService } from '../core/session/session.service';
 import { UserRepo } from '@docmost/db/repos/user/user.repo';
 import { McpScope, McpToken } from './mcp.constants';
 import { registerTools } from './mcp-tools';
-import { randomUUID } from 'node:crypto';
 import { McpTokenService } from './mcp-token.service';
+import { InternalApi } from './internal-api';
 
 const safeEqual = (a: string, b: string) => {
   const x = Buffer.from(a);
@@ -75,95 +75,12 @@ export class McpService {
     return this.accessToken;
   }
 
-  private async callApi(path: string, body: Record<string, any> = {}) {
-    const fastify: any = this.httpAdapterHost.httpAdapter.getInstance();
-    const host = new URL(this.env.getAppUrl()).host;
-
-    const send = async (token: string) =>
-      fastify.inject({
-        method: 'POST',
-        url: `/api${path}`,
-        headers: {
-          authorization: `Bearer ${token}`,
-          'content-type': 'application/json',
-          host,
-        },
-        payload: JSON.stringify(body),
-      });
-
-    let res = await send(await this.sessionToken());
-    if (res.statusCode === 401) res = await send(await this.sessionToken(true));
-
-    let json: any = null;
-    try {
-      json = res.body ? JSON.parse(res.body) : null;
-    } catch {
-      /* not json */
-    }
-
-    if (res.statusCode >= 400) {
-      const message = Array.isArray(json?.message)
-        ? json.message.join('; ')
-        : json?.message;
-      throw new Error(message || `Request failed with status ${res.statusCode}`);
-    }
-    // the API wraps results as { data, success, status }
-    return json && 'data' in json ? json.data : json;
-  }
-
-  /** Uploads a text file to a page the way the editor does (multipart to /files/upload). */
-  private async uploadFile(
-    pageId: string,
-    fileName: string,
-    content: string,
-    mime: string,
-    attachmentId?: string,
-  ) {
-    const fastify: any = this.httpAdapterHost.httpAdapter.getInstance();
-    const host = new URL(this.env.getAppUrl()).host;
-    const boundary = `----mcp${randomUUID()}`;
-    const field = (name: string, value: string) =>
-      Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="${name}"\r\n\r\n${value}\r\n`);
-    const payload = Buffer.concat([
-      field('pageId', pageId),
-      ...(attachmentId ? [field('attachmentId', attachmentId)] : []),
-      Buffer.from(
-        `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${fileName}"\r\nContent-Type: ${mime}\r\n\r\n`,
-      ),
-      Buffer.from(content, 'utf8'),
-      Buffer.from(`\r\n--${boundary}--\r\n`),
-    ]);
-
-    const send = async (token: string) =>
-      fastify.inject({
-        method: 'POST',
-        url: '/api/files/upload',
-        headers: {
-          authorization: `Bearer ${token}`,
-          'content-type': `multipart/form-data; boundary=${boundary}`,
-          host,
-        },
-        payload,
-      });
-
-    let res = await send(await this.sessionToken());
-    if (res.statusCode === 401) res = await send(await this.sessionToken(true));
-    const json = res.body ? JSON.parse(res.body) : null;
-    if (res.statusCode >= 400) throw new Error(json?.message || `Upload failed (${res.statusCode})`);
-    return json && 'data' in json ? json.data : json;
-  }
-
-  private async downloadFile(src: string): Promise<string> {
-    const fastify: any = this.httpAdapterHost.httpAdapter.getInstance();
-    const host = new URL(this.env.getAppUrl()).host;
-    const path = src.split('?')[0];
-    const get = async (token: string) =>
-      fastify.inject({ method: 'GET', url: path, headers: { authorization: `Bearer ${token}`, host } });
-
-    let res = await get(await this.sessionToken());
-    if (res.statusCode === 401) res = await get(await this.sessionToken(true));
-    if (res.statusCode >= 400) throw new Error(`Could not read the stored file (${res.statusCode})`);
-    return res.body;
+  private internalApi() {
+    return new InternalApi(
+      this.httpAdapterHost.httpAdapter.getInstance(),
+      new URL(this.env.getAppUrl()).host,
+      (force) => this.sessionToken(force),
+    );
   }
 
   async handle(req: FastifyRequest, reply: FastifyReply) {
@@ -178,9 +95,10 @@ export class McpService {
     const handler = createMcpHandler(
       () => {
         const server = new McpServer({ name: 'docmost-lite', version: '1.0.0' });
-        registerTools(server, (p, b) => this.callApi(p, b), token.scopes, {
-          upload: (...a) => this.uploadFile(...a),
-          download: (src) => this.downloadFile(src),
+        const api = this.internalApi();
+        registerTools(server, api.call, token.scopes, {
+          upload: api.upload,
+          download: api.download,
         });
         return server;
       },

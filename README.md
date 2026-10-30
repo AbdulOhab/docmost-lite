@@ -88,6 +88,50 @@ This build is for one person: the owner account is created by the seeder or the
 setup page. Inviting other members was removed. (The database tables still exist;
 only the server endpoints and screens are gone.)
 
+## Assistant (AI chat that can use the app for you)
+
+**Assistant** in the sidebar is a chat where you type what you want and an AI model
+does it with the same tools the MCP endpoint offers: search and read pages, create and
+edit pages, add comments, create and edit diagrams. It acts as **you** (your
+permissions), shows each step it takes, and links to the pages it touched.
+
+It is built on the [Vercel AI SDK](https://ai-sdk.dev) (the same library upstream Docmost's AI uses): replies stream in as they are written, and tool use is the SDK's standard loop. No extra container or service is needed.
+
+Set it up in **Settings → AI Assistant** (owner/admin):
+
+- **Providers:** add any OpenAI-compatible service (presets for Z.ai GLM, OpenAI,
+  OpenRouter and Ollama, or your own address). Enter the API address and key, then
+  *Fetch model names* (or type them) and *Test connection*. Keys are stored encrypted
+  with `APP_SECRET`, never shown again (only the last 4 characters), and a blank key
+  field on edit keeps the saved one.
+- **Several models:** every enabled provider's models appear in the **model switcher**
+  at the top of the Assistant, and each person's choice is remembered in their browser.
+- **Behavior:** default model, creativity (temperature), the most tool steps per
+  request, and extra instructions that are added to the assistant's built-in rules.
+
+Or set one provider in `.env` (it then shows as read-only "From .env"):
+
+```bash
+AI_API_KEY=<your key>
+AI_MODEL=<model name from your provider>
+AI_MODELS=<more model names, comma separated>   # optional
+# AI_BASE_URL defaults to Z.ai's general GLM API: https://api.z.ai/api/paas/v4
+```
+
+For GLM use the **general API key** (pay per token). A *GLM Coding Plan* key may only be
+used inside Z.ai's supported coding tools, so do not put it here; use it with Claude
+Code or OpenCode plus the MCP endpoint below instead.
+
+Things to know:
+
+- It cannot delete anything (the delete tools are not offered to it).
+- Connecting is patient (long connect timeout, retries), because some routes to the AI host are slow or lossy.
+- It can create and change pages, so check what it reports. It prefers appending over replacing.
+- Every request is billed by your AI provider. Each message can trigger several model calls (one per tool step, at most 8).
+- The conversation is kept in your browser only (last 40 messages) and the model sees the
+  whole chat each time. Page text it reads is sent to the AI provider.
+- It uses the normal keyword search, not embeddings, so wording matters for finding pages.
+
 ## Diagrams
 
 **Diagrams** in the sidebar has its own navigation like a space: a menu (all diagrams,
@@ -196,6 +240,7 @@ Copy `.env.example`. The settings that matter:
 | `PORT` | Default 3000 |
 | `OWNER_EMAIL`, `OWNER_PASSWORD` | Optional first-owner seeder |
 | `FILE_UPLOAD_SIZE_LIMIT`, `FILE_IMPORT_SIZE_LIMIT` | Upload limits (50mb / 200mb) |
+| `AI_API_KEY`, `AI_MODEL`, `AI_MODELS`, `AI_BASE_URL` | Optional Assistant (see above) |
 | `DRAWIO_URL` | Custom Draw.io server (optional; the default needs internet) |
 | `MCP_TOKEN`, `MCP_SCOPES`, `MCP_TOKENS` | Optional MCP access (see above) |
 

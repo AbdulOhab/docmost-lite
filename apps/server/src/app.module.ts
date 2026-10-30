@@ -25,6 +25,7 @@ import { NoopAuditModule } from './integrations/audit/audit.module';
 import { ThrottleModule } from './integrations/throttle/throttle.module';
 import { McpModule } from './mcp/mcp.module';
 import { DiagramsModule } from './diagrams/diagrams.module';
+import { AiModule } from './ai/ai.module';
 import { OutboundModule } from './integrations/outbound/outbound.module';
 import { EncryptionModule } from './integrations/encryption/encryption.module';
 
@@ -58,6 +59,7 @@ import { EncryptionModule } from './integrations/encryption/encryption.module';
     OutboundModule,
     McpModule,
     DiagramsModule,
+    AiModule,
   ],
   controllers: [AppController],
   providers: [

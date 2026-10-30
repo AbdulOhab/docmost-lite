@@ -77,6 +77,28 @@ export class EnvironmentService {
     return this.configService.get<string>('FILE_UPLOAD_SIZE_LIMIT') || '50mb';
   }
 
+  /**
+   * The in-app assistant. Works with any OpenAI-compatible chat API; the default
+   * base URL is Z.ai's general (pay-per-token) GLM API.
+   */
+  getAiConfig(): { apiKey?: string; baseUrl: string; model?: string; models: string[] } {
+    const model = this.configService.get<string>('AI_MODEL') || undefined;
+    // AI_MODELS may list more than one model for the switcher
+    const extra = (this.configService.get<string>('AI_MODELS') || '')
+      .split(',')
+      .map((m) => m.trim())
+      .filter(Boolean);
+    return {
+      models: [...new Set([...(model ? [model] : []), ...extra])],
+      apiKey: this.configService.get<string>('AI_API_KEY') || undefined,
+      baseUrl: (
+        this.configService.get<string>('AI_BASE_URL') ||
+        'https://api.z.ai/api/paas/v4'
+      ).replace(/\/+$/, ''),
+      model,
+    };
+  }
+
   getDrawioUrl(): string {
     return this.configService.get<string>('DRAWIO_URL') || undefined;
   }
