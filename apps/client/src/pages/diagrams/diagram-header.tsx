@@ -27,11 +27,19 @@ export default function DiagramHeader({
   initialTitle,
   onTitle,
   children,
+  backTo = "/diagrams",
+  backLabel = "All diagrams",
+  invalidate = "diagrams",
+  fallbackTitle = "Untitled diagram",
 }: {
   pageId: string;
   initialTitle: string;
   onTitle?: (title: string) => void;
   children?: ReactNode;
+  backTo?: string;
+  backLabel?: string;
+  invalidate?: string;
+  fallbackTitle?: string;
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -40,14 +48,14 @@ export default function DiagramHeader({
   const savedTitle = useRef(initialTitle ?? "");
 
   const commit = async () => {
-    const next = title.trim() || "Untitled diagram";
+    const next = title.trim() || fallbackTitle;
     setTitle(next);
     if (next === savedTitle.current) return;
     try {
       await renameDiagram(pageId, next);
       savedTitle.current = next;
       onTitle?.(next);
-      queryClient.invalidateQueries({ queryKey: ["diagrams"] });
+      queryClient.invalidateQueries({ queryKey: [invalidate] });
     } catch {
       notifications.show({ message: t("Could not rename"), color: "red" });
     }
@@ -63,8 +71,8 @@ export default function DiagramHeader({
     >
       <DocumentTitle title={title || t("Diagram")} />
       <Group wrap="nowrap" gap="xs" style={{ flex: 1, minWidth: 0 }}>
-        <Tooltip label={t("All diagrams")} withArrow>
-          <ActionIcon variant="subtle" color="gray" aria-label={t("All diagrams")} onClick={() => navigate("/diagrams")}>
+        <Tooltip label={t(backLabel)} withArrow>
+          <ActionIcon variant="subtle" color="gray" aria-label={t(backLabel)} onClick={() => navigate(backTo)}>
             <IconArrowLeft size={18} />
           </ActionIcon>
         </Tooltip>
@@ -75,7 +83,7 @@ export default function DiagramHeader({
           onChange={(e) => setTitle(e.currentTarget.value)}
           onBlur={commit}
           onKeyDown={(e) => e.key === "Enter" && (e.currentTarget as HTMLInputElement).blur()}
-          placeholder={t("Untitled diagram")}
+          placeholder={t(fallbackTitle)}
           aria-label={t("Diagram name")}
           maxLength={200}
           style={{ flex: 1, minWidth: 0 }}

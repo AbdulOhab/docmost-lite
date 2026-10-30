@@ -23,6 +23,7 @@ import { useTrialEndAction } from "@/ee/hooks/use-trial-end-action.tsx";
 import { useToggleSidebar } from "@/components/layouts/global/hooks/hooks/use-toggle-sidebar.ts";
 import GlobalSidebar from "@/components/layouts/global/global-sidebar.tsx";
 import DiagramsSidebar from "@/features/diagrams/diagrams-sidebar.tsx";
+import KanbanSidebar from "@/features/kanban/kanban-sidebar.tsx";
 import { ASIDE_PANEL_ID } from "@/hooks/use-toggle-aside.tsx";
 import { MAIN_CONTENT_ID, SkipToMain } from "@/components/ui/skip-to-main.tsx";
 
@@ -85,9 +86,10 @@ export default function GlobalAppShell({
   const isSpaceRoute = location.pathname.startsWith("/s/");
   const isAiRoute = location.pathname.startsWith("/ai");
   const isDiagramsRoute = location.pathname.startsWith("/diagrams");
+  const isKanbanRoute = location.pathname.startsWith("/kanban");
   const isPageRoute = location.pathname.includes("/p/");
   const showGlobalSidebar =
-    !isSpaceRoute && !isSettingsRoute && !isAiRoute && !isDiagramsRoute;
+    !isSpaceRoute && !isSettingsRoute && !isAiRoute && !isDiagramsRoute && !isKanbanRoute;
 
   return (
     <>
@@ -127,7 +129,9 @@ export default function GlobalAppShell({
                 ? t("AI navigation")
                 : isDiagramsRoute
                   ? t("Diagrams navigation")
-                  : t("Main navigation")
+                  : isKanbanRoute
+                    ? t("Kanban navigation")
+                    : t("Main navigation")
         }
       >
         {isSpaceRoute && (
@@ -136,6 +140,7 @@ export default function GlobalAppShell({
         {isSpaceRoute && <SpaceSidebar />}
         {isSettingsRoute && <SettingsSidebar />}
         {isDiagramsRoute && <DiagramsSidebar />}
+        {isKanbanRoute && <KanbanSidebar />}
         {isAiRoute && (
           <React.Suspense fallback={null}>
             <AiChatSidebar />

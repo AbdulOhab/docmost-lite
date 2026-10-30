@@ -3,6 +3,7 @@ import { McpServer } from '@modelcontextprotocol/server';
 import { generateJitteredKeyBetween } from 'fractional-indexing-jittered';
 import { McpScope } from './mcp.constants';
 import { FileApi, registerDiagramTools } from './mcp-diagram-tools';
+import { registerKanbanTools } from './mcp-kanban-tools';
 
 export type ApiCaller = (path: string, body?: Record<string, any>) => Promise<any>;
 
@@ -82,6 +83,7 @@ export function registerTools(
   files: FileApi,
 ): void {
   registerDiagramTools(server, api, files, scopes);
+  registerKanbanTools(server, api, scopes);
 
   if (scopes.has('read')) {
     server.registerTool(

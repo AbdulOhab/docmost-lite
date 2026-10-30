@@ -8,6 +8,7 @@ import {
   IconSettings,
   IconUserPlus,
   IconScribble,
+  IconLayoutKanban,
 } from "@tabler/icons-react";
 import { Link, useLocation } from "react-router-dom";
 import classes from "./global-sidebar.module.css";
@@ -32,6 +33,7 @@ export default function GlobalSidebar() {
     { label: "Favorites", icon: IconStar, path: "/favorites" },
     { label: "Spaces", icon: IconLayoutGrid, path: "/spaces" },
     { label: "Diagrams", icon: IconScribble, path: "/diagrams" },
+    { label: "Kanban", icon: IconLayoutKanban, path: "/kanban" },
   ];
   const { data: favoriteSpacesData, isPending: isFavoritesPending } = useFavoritesQuery("space");
   const favoriteSpaces = favoriteSpacesData?.pages.flatMap((p) => p.items) ?? [];

@@ -40,7 +40,7 @@ section 4.
 Single-user, single-process Docmost that needs only Node and PostgreSQL. Everything that
 needed Redis, a mail service, or an external search/AI/billing service was removed or
 replaced by an in-process equivalent; Enterprise code is not enabled. On top of that the
-fork adds MCP, a Diagrams section, and diagram library packs. (An in-app AI Assistant was
+fork adds MCP, a Diagrams section, diagram library packs and a Kanban section. (An in-app AI Assistant was
 built and then removed on purpose: use the MCP endpoint from an external AI tool instead.)
 Do not undo these choices while merging: **no Redis, no email, no extra container**.
 
@@ -75,8 +75,13 @@ The client `ee` folder is still present (the UI imports it) but its features are
 - `apps/server/scripts/reset-password.js`.
 - Migrations `20261030T120000-mcp-tokens`, `20261030T130000-diagram-libraries`
   (see the migration warning below).
-- Client: `features/diagrams`, `features/mcp`, `pages/diagrams`,
-  `pages/settings/{mcp,diagram-libraries}`.
+- Client: `features/diagrams`, `features/mcp`, `features/kanban`, `pages/diagrams`, `pages/kanban`,
+  `pages/settings/{mcp,diagram-libraries}`. Kanban boards are plain pages in a `kanban` space
+  (one JSON code block, language `kanban`); the UI uses Mantine + the already-installed
+  `@atlaskit/pragmatic-drag-and-drop`. Do not confuse it with upstream's Enterprise "Bases"
+  (`client/src/ee/base`), which stays unused. `diagram-header.tsx` is shared with Kanban.
+- Server: `mcp/mcp-kanban-tools.ts` (list_boards, get_board, create_board, add_column, add_card,
+  update_card, move_card, delete_card, delete_column).
 - New dependencies: server `@modelcontextprotocol/server`; client `@excalidraw/mermaid-to-excalidraw`.
 
 ## 4. Conflict hotspots (upstream files the fork edited)

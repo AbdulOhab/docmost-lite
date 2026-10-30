@@ -41,6 +41,8 @@ const SharedPage = lazyWithPrefetch(() => import("@/pages/share/shared-page.tsx"
 const PdfRenderPage = lazyWithPrefetch(() => import("@/ee/pdf-export/pdf-render-page.tsx"));
 const Diagrams = lazyWithPrefetch(() => import("@/pages/diagrams/diagrams.tsx"));
 const DiagramEditor = lazyWithPrefetch(() => import("@/pages/diagrams/diagram-editor.tsx"));
+const KanbanBoards = lazyWithPrefetch(() => import("@/pages/kanban/kanban-boards.tsx"));
+const KanbanEditor = lazyWithPrefetch(() => import("@/pages/kanban/kanban-editor.tsx"));
 const DiagramLibraries = lazyWithPrefetch(() => import("@/pages/settings/diagram-libraries.tsx"));
 const McpSettings = lazyWithPrefetch(() => import("@/pages/settings/mcp/mcp-settings.tsx"));
 const Shares = lazyWithPrefetch(() => import("@/pages/settings/shares/shares.tsx"));
@@ -155,6 +157,8 @@ export default function App() {
           <Route path={"/spaces"} element={<SpacesPage />} />
           <Route path={"/diagrams"} element={<Diagrams />} />
           <Route path={"/diagrams/:pageId"} element={<DiagramEditor />} />
+          <Route path={"/kanban"} element={<KanbanBoards />} />
+          <Route path={"/kanban/:pageId"} element={<KanbanEditor />} />
           <Route path={"/favorites"} element={<FavoritesPage />} />
           <Route path={"/labels/:labelName"} element={<LabelPage />} />
           <Route path={"/templates"} element={<TemplateList />} />
