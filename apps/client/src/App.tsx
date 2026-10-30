@@ -39,10 +39,8 @@ const Security = lazyWithPrefetch(() => import("@/ee/security/pages/security.tsx
 const License = lazyWithPrefetch(() => import("@/ee/licence/pages/license.tsx"));
 const SharedPage = lazyWithPrefetch(() => import("@/pages/share/shared-page.tsx"));
 const PdfRenderPage = lazyWithPrefetch(() => import("@/ee/pdf-export/pdf-render-page.tsx"));
-const Assistant = lazyWithPrefetch(() => import("@/pages/assistant/assistant.tsx"));
 const Diagrams = lazyWithPrefetch(() => import("@/pages/diagrams/diagrams.tsx"));
 const DiagramEditor = lazyWithPrefetch(() => import("@/pages/diagrams/diagram-editor.tsx"));
-const AssistantSettings = lazyWithPrefetch(() => import("@/pages/settings/assistant-settings.tsx"));
 const DiagramLibraries = lazyWithPrefetch(() => import("@/pages/settings/diagram-libraries.tsx"));
 const McpSettings = lazyWithPrefetch(() => import("@/pages/settings/mcp/mcp-settings.tsx"));
 const Shares = lazyWithPrefetch(() => import("@/pages/settings/shares/shares.tsx"));
@@ -155,7 +153,6 @@ export default function App() {
           <Route path={"/ai"} element={<AiChat />} />
           <Route path={"/ai/chat/:chatId"} element={<AiChat />} />
           <Route path={"/spaces"} element={<SpacesPage />} />
-          <Route path={"/assistant"} element={<Assistant />} />
           <Route path={"/diagrams"} element={<Diagrams />} />
           <Route path={"/diagrams/:pageId"} element={<DiagramEditor />} />
           <Route path={"/favorites"} element={<FavoritesPage />} />
@@ -194,7 +191,6 @@ export default function App() {
             <Route path={"spaces"} element={<Spaces />} />
             <Route path={"sharing"} element={<Shares />} />
             <Route path={"mcp"} element={<McpSettings />} />
-            <Route path={"assistant"} element={<AssistantSettings />} />
             <Route path={"diagram-libraries"} element={<DiagramLibraries />} />
             <Route path={"security"} element={<Security />} />
             <Route path={"ai"} element={<AiSettings />} />

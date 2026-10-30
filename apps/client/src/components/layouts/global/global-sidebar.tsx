@@ -8,7 +8,6 @@ import {
   IconSettings,
   IconUserPlus,
   IconScribble,
-  IconSparkles,
 } from "@tabler/icons-react";
 import { Link, useLocation } from "react-router-dom";
 import classes from "./global-sidebar.module.css";
@@ -32,7 +31,6 @@ export default function GlobalSidebar() {
     { label: "Home", icon: IconHome, path: "/home" },
     { label: "Favorites", icon: IconStar, path: "/favorites" },
     { label: "Spaces", icon: IconLayoutGrid, path: "/spaces" },
-    { label: "Assistant", icon: IconSparkles, path: "/assistant" },
     { label: "Diagrams", icon: IconScribble, path: "/diagrams" },
   ];
   const { data: favoriteSpacesData, isPending: isFavoritesPending } = useFavoritesQuery("space");

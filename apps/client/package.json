@@ -12,7 +12,6 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@ai-sdk/react": "^4.0.158",
     "@atlaskit/pragmatic-drag-and-drop": "1.8.1",
     "@atlaskit/pragmatic-drag-and-drop-auto-scroll": "2.1.5",
     "@atlaskit/pragmatic-drag-and-drop-flourish": "2.0.15",
@@ -38,7 +37,6 @@
     "@tanstack/react-query": "5.90.17",
     "@tanstack/react-table": "8.21.3",
     "@tanstack/react-virtual": "3.14.3",
-    "ai": "^7.0.154",
     "alfaaz": "1.1.0",
     "axios": "1.20.0",
     "blueimp-load-image": "5.16.0",

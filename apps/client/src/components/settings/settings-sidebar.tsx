@@ -85,7 +85,6 @@ const groupedData: DataGroup[] = [
       { label: "Groups", icon: IconUsersGroup, path: "/settings/groups" },
       { label: "Spaces", icon: IconSpaces, path: "/settings/spaces" },
       { label: "Public sharing", icon: IconWorld, path: "/settings/sharing" },
-      { label: "AI Assistant", icon: IconSparkles, path: "/settings/assistant", role: "admin" },
       { label: "MCP", icon: IconPlugConnected, path: "/settings/mcp", role: "admin" },
       { label: "Diagram libraries", icon: IconBooks, path: "/settings/diagram-libraries", role: "admin" },
     ],
